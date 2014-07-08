@@ -1,18 +1,22 @@
+<!doctype html>
 <html>
 	<style type="text/css">
 		.timeline{
-			width: 99%;
+			width: 1800px;
 			height: 200px;
-			border: 1px black solid;
+			border: 1px #E5E5E5 solid;
+			z-index: 100;
+			position: relative;
+			overflow: hidden;
 		}
 
 		.timeline .content{
-
+			left: 100px;
+			position: relative;
 		}
 
-		.timeline .content-inner{
-			width: 5000px;
-
+		.timeline .content-cave{
+			height: 150px;
 		}
 
 		.timeline .small-facet{
@@ -23,49 +27,101 @@
 		}
 
 		.timeline .event{
-			height: 30px;
-			width: 100px;
-			border: 1px black solid;
+			height: 150px;
+			width: 150px;
+			border-left: 1px #E5E5E5 solid;
+			position: absolute;
+		}
+
+		.timeline .event:hover{
+			border-left-color: #999999;
+		}
+
+
+		.timeline .text:hover{
+			/*border-color: #B6B6B6;*/
+			/*background-color: white;*/
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: 0 -53px;
+			color: #0088CC;
+		}
+
+		.timeline .text{
+			height: 50px;
+			width: 153px;
+			/*border: 1px #D8D8D8 solid;*/
+			margin: 0px;
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: 0 0;
+			/*background-color: #EFEFEF;*/
+			color: #9999A3;
+			text-align: center;
+			-webkit-border-radius: 2px;  
+			-moz-border-radius: 2px;  
+			border-radius: 2px;  
 		}
 
 		.timeline .facet{
+			margin-top: 5px;
 			position: absolute;
-			text-align: center;
-			left: 100px;
+			text-indent: -10px;
+			font-weight: normal;
+			font-size: 10px;
+			color: #666;
+			font-size: 11px;
+			line-height: 11px;
+			font-weight: bold;
 		}
 
 		.timeline .facet-inner{
-			background: url("small-facet.png") repeat-y;
+			background: url("small-facet.png") repeat-y ;
 			height: 10px;
-			width: 5px;
-			margin: 0px 47.5px 0px 47.5px;
+			width: 100%;
+		}
+
+		.timeline .background{
+			position: absolute;
+			top: 0px;
+		}
+
+		.timeline .line{
+			left:898px;
+			height: 150px;
+			width: 4px;
+			background-color: #08c; 
+			position: absolute;
+			z-index: 1;
+		}
+
+		.timeline .indicator{
+			z-index: 2;
+			position: absolute;
+			left: 888px;
+			width: 24px;
+			height: 24px;
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: -160px -48px;
 		}
 	</style>
 	<script type="text/javascript" src="jquery-1.11.1.js"></script>
 
 	<body>
 		<div class="timeline">
-			<div class="head"></div>
 			<div class="content">
-				<div class="content-inner">
-					<div class="event">test1</div>
-					<div class="event">test2</div>
-					<div class="event">test5</div>
-					<div class="small-facet"></div>
-					<div class="large-facet">
-<!-- 						<div class="facet"><div class="facet-inner"></div>Dec. 11</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 12</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 13</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 14</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 15</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 16</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 17</div>
-						<div class="facet"><div class="facet-inner"></div>Dec. 18</div> -->
-					</div>
+				<div class="content-cave">
+					<!-- <div class="event"><div class="text"></div></div> -->
+				</div>
+				<div class="small-facet"></div>
+				<div class="large-facet">
+					<!-- <div class="facet"><div class="facet-inner"></div><div></div></div> -->
 				</div>
 			</div>
-			<div class="tail">
-				<div ></div>
+			<div class="background">
+				<div class="indicator"></div>
+				<div class="line"></div>
 			</div>
 		</div>
 	</body>
@@ -75,16 +131,15 @@
 
 	function TimelineFacet(config) {
 		var _safePx = 70,
-			_unitMap = {
-				year: [365*24*60*60*1000],
-				month: [365*24*60*60*1000/12],
-				week: [7*24*60*60*1000],
-				day: [24*60*60*1000],
-				hour: [60*60*1000],
-				minute: [60*1000],
-				second: [1000],
-				millisecond: [1]
-			},
+			_formatter = [
+				function(date) { return date.getYear();},
+				function(date) { return date.getMonth();},
+				function(date) { return (date.getMonth()+1) + '/' + date.getDate();},
+				function(date) { return date.getHours();},
+				function(date) { return date.getMinutes();},
+				function(date) { return date.getSeconds();},
+				function(date) { return date.getMilliseconds();}
+			],
 			period = config.period,
 			pivote = config.pivote,
 			periodOffset = config.periodOffset,
@@ -93,6 +148,9 @@
 			height = config.height;
 
 		return {
+			getDistanceFromStart: function(facetTime, realWidth) {
+				return Math.abs(facetTime.getTime() - this.getStartTime()) / this.getMillisecondsPerPx(realWidth);
+			},
 			getDistance: function(startTime, facetTime, realWidth) {
 				return Math.abs(facetTime.getTime() - startTime.getTime()) / this.getMillisecondsPerPx(realWidth);
 			},
@@ -138,20 +196,78 @@
 			getMiddleTime: function() {
 				var start = getStartTime().getTime();
 				return new Date((getEndTime().getTime() - start)/2 + start);
+			},
+			formatDate: function(date) {
+				return _formatter[unit - 1](date);
 			}
 		};
 	}
 
-	function initTime() {
-		var timeData = config.data;
+	function TimelineEvent(config) {
+		return {
+			sort: function(events) {
+				events.sort(function(e1, e2) {
+					var start1 = e1.start.getTime(),
+						start2 = e2.start.getTime(),
+						end1 = e1.end.getTime(),
+						end2 = e2.end.getTime();
 
-		for (var i = timeData.length - 1; i >= 0; i--) {
-			buildTime(timeData[i]);
-		}
+					if(start1 != start2)
+						return start1 - start2;
+					else
+						return end1 - end2;
+				});
+			}
+		};
 	}
 
-	function buildTime(data) {
+	function init() {
+		var timeData = config.data,
+			events = [],
+			length = timeData.length;
 
+		_minDate = _maxDate = timeData[length - 1];
+		events.push($.extend({}, timeData[length - 1]));
+		// bulid event
+		for (var i = timeData.length - 2; i >= 0; i--) {
+			var obj = $.extend({}, timeData[i]),
+				start = obj.start,
+				end = obj.end;
+
+			events.push(obj);
+			if(_maxDate < end) maxDate = end;
+			if(_minDate > start) minDate = start;
+
+		}
+
+		buildFacet();
+		buildEvent(events);
+	}
+
+	function buildFacet() {
+		var start = _timelineFacet.getStartTime(),
+			date = new Date(config.pivote),
+			width = 0,
+			dom = '';
+
+		for (var i = 1; i < 20; i++) {
+			date = _timelineFacet.getNextFacet(date);
+			width = _timelineFacet.getDistance(start, date, _realWidth);
+
+			dom += '<div class="facet" style="left:' + width + 'px"><div class="facet-inner"></div><div>' + _timelineFacet.formatDate(date) + '</div></div>';
+		}
+
+		$('.large-facet').append(dom);
+	}
+
+	function buildEvent(events) {
+		var html = '';
+		for(var i = 0, length = events.length; i < length; i++) {
+			var event = events[i];
+			html += '<div class="event" style="left:' + _timelineFacet.getDistanceFromStart(event.start, _realWidth) + 'px"><div class="text">' + event.title + '</div></div>'
+		}
+
+		$('.content-cave').append(html);
 	}
 
 	var _year = 1,
@@ -161,41 +277,36 @@
 		_minute = 5,
 		_second = 6,
 		_millisecond = 7,
+		_maxDate,
+		_minDate,
+		_realWidth = 1920,
 		config = {
 			width: '100%',
 			height: '300px',
+			eventWidth: 150,
+			eventHeight: 40,
 			period: 604800000,
-			pivote: 1404721450168,
-			periodOffset: 302400000,
+			pivote: new Date('2014/6/6 00:00:00').getTime(),
+			periodOffset: 0,
 			unit: _day,
 			data:[
 				{
-					start: 1404721450168,
-					end: 1404721650168,
+					start: new Date('2014/6/6 12:00:00'),
+					end: new Date('2014/6/7 2:00:00'),
 					title: 'test1'
 				},
 				{
-					start: 1404721850168,
-					end: 1404721950168,
-					title: 'test1'
+					start: new Date('2014/6/8 0:00:00'),
+					end: new Date('2014/6/9 0:00:00'),
+					title: 'test2'
 				}
 			]
-		};
+		},
+		_timelineFacet = new TimelineFacet(config),
+		_timelineEvent = new TimelineEvent(config);
 
-	initTime();
-	test = new TimelineFacet(config);
-
-	var date = new Date(),
-		now = new Date(date),
-		width = 0;
-
-	for (var i = 1; i < 10; i++) {
-		date = test.getNextFacet(date);
-		width = test.getDistance(now, date, 1000);
-		console.log(date, width);
-
-		$('.large-facet').append('<div class="facet" style="left:' + width + 'px"><div class="facet-inner"></div>' + date.getDate() + ' ' + date.getHours() + ':' + date.getMinutes() + '' + '</div>')
-	}
+	init();
+	
 })();
 	</script>
 </html>
