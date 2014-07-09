@@ -1,0 +1,50 @@
+<zk>
+	<window title="Test 3" border="normal"
+		apply="test.ctrl.DemoWindowComposer">
+				
+			<vlayout spacing="10px">
+		
+				<imageslider id="imageSlider" onSelect="" viewportSize="4" >
+					<image src="resources/img/ironman-01.jpg" />
+					<image src="resources/img/ironman-02.jpg" />
+					<image src="resources/img/ironman-03.jpg" />
+					<image src="resources/img/ironman-04.jpg" />
+					<image src="resources/img/ironman-05.jpg" />
+				</imageslider>
+		
+				<groupbox closable="false">
+					<caption label="Image Width" />
+					<vlayout spacing="10px">
+						<spinner id="imageWidthQuantity" value="200" constraint="no empty,min 0" />
+						<button id="setImageWidth" label="setImageWidth"></button>
+					</vlayout>
+				</groupbox>
+				
+				<groupbox closable="false">
+					<caption label="Viewport" />
+					<vlayout spacing="10px">
+						<spinner id="viewportQuantity" value="5" constraint="no empty,min 0" />
+						<button id="setViewport" label="setViewPort"></button>
+					</vlayout>
+				</groupbox>
+				
+				<groupbox closable="false">
+					<caption label="Selected Index" />
+					<vlayout spacing="10px">
+						<spinner id="selectedIndexQuantity" value="4" constraint="no empty,min 0" />
+						<button id="setSelectedIndex" label="setSelectedIndex"></button>
+					</vlayout>
+				</groupbox>
+				
+				<groupbox closable="false">
+					<caption label="Add / Remove" />
+					<vlayout spacing="10px">
+						<button id="addImage" label="add child"></button>
+						<button id="removeImage" label="remove child"></button>
+					</vlayout>
+				</groupbox>
+			
+			</vlayout>
+
+	</window>
+</zk>

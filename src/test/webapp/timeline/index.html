@@ -5,13 +5,12 @@
 			width: 1800px;
 			height: 200px;
 			border: 1px #E5E5E5 solid;
-			z-index: 100;
 			position: relative;
 			overflow: hidden;
 		}
 
 		.timeline .content{
-			left: 100px;
+			left: 0px;
 			position: relative;
 		}
 
@@ -20,7 +19,6 @@
 		}
 
 		.timeline .small-facet{
-			width: 5000px;
 			height: 5px;
 			background-image: url("small-facet.png");
 			background-repeat: repeat;
@@ -84,6 +82,9 @@
 		.timeline .background{
 			position: absolute;
 			top: 0px;
+			width: 1800px;
+			height: 200px;
+			cursor: move;
 		}
 
 		.timeline .line{
@@ -92,11 +93,11 @@
 			width: 4px;
 			background-color: #08c; 
 			position: absolute;
-			z-index: 1;
+			z-index: 10;
 		}
 
 		.timeline .indicator{
-			z-index: 2;
+			z-index: 20;
 			position: absolute;
 			left: 888px;
 			width: 24px;
@@ -104,6 +105,51 @@
 			background-image: url(timeline.png?v4.4);
 			background-repeat: no-repeat;
 			background-position: -160px -48px;
+		}
+
+		.timeline .control{
+			z-index: 30;
+			position: absolute;
+			left: 0px;
+			top: 30px;
+			background-color: #fff;
+			border: 1px solid #ccc;
+			-webkit-box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+			-moz-box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+			box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+		}
+
+		.timeline .control > div{
+			padding: 6px;
+			opacity: 0.3;
+			filter: alpha(opacity=30);
+			cursor: pointer;
+		}
+
+		.timeline .control > div:hover{
+			opacity: 0.8;
+			filter: alpha(opacity=80);
+		}
+
+		.timeline .control .icon{
+			width: 16px;
+			height: 16px;
+			background-repeat: no-repeat;
+		}
+
+		.timeline .home .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -328px 0;
+		}
+
+		.timeline .zoom-in .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -256px 0;
+		}
+
+		.timeline .zoom-out .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -280px 0;
 		}
 	</style>
 	<script type="text/javascript" src="jquery-1.11.1.js"></script>
@@ -122,6 +168,11 @@
 			<div class="background">
 				<div class="indicator"></div>
 				<div class="line"></div>
+			</div>
+			<div class="control">
+				<div class="home"><div class="icon"> </div></div>
+				<div class="zoom-in"><div class="icon"> </div></div>
+				<div class="zoom-out"><div class="icon"> </div></div>
 			</div>
 		</div>
 	</body>
@@ -152,6 +203,7 @@
 				return Math.abs(facetTime.getTime() - this.getStartTime()) / this.getMillisecondsPerPx(realWidth);
 			},
 			getDistance: function(startTime, facetTime, realWidth) {
+				console.log(Math.abs(facetTime.getTime() - startTime.getTime()), this.getMillisecondsPerPx(realWidth));
 				return Math.abs(facetTime.getTime() - startTime.getTime()) / this.getMillisecondsPerPx(realWidth);
 			},
 			getNextFacet: function(startTime) {
@@ -182,6 +234,7 @@
 				return new Date(facetTimeArr[0], facetTimeArr[1], facetTimeArr[2], facetTimeArr[3], facetTimeArr[4], facetTimeArr[5], facetTimeArr[6]);
 			},
 			getMillisecondsPerPx: function(realWidth) {
+				console.log(period, realWidth);
 				return period / realWidth;
 			},
 			getSafeMs: function() {
@@ -221,10 +274,113 @@
 		};
 	}
 
+	function TimelineSlide(config, $dragPane, $target) {
+		if(!$target) $target = $dragPane;
+		var dragging = false,
+			mouseX = 0,
+			targetX = 0, 
+			minDistance = config.minDistance,
+			friction = 1,
+			beginEvent,
+			getOffsetX = function(event) {
+				// firefox doesn't have offsetX
+				return event.offsetX || event.clientX - $dragPane.offset().left;
+			},
+			startTracking = function(event) {
+				var left = targetX + getOffsetX(event) - mouseX;
+				if(left > 0 || left < (-_realWidth)) 
+					return;
+				$target.css('left', left + 'px');
+			},
+			stopTracking = function(event) {
+				$dragPane.unbind('mousemove');
+				dragging = false;
+				doMomentum(beginEvent, event);
+				beginEvent = null;
+			},
+			doMomentum = function(event1, event2) {
+				if(!(event1 && event2)) return;
+
+				var x1 = getOffsetX(event1),
+					t1 = event1.timeStamp,
+					x2 = getOffsetX(event2),
+					t2 = event2.timeStamp,
+
+					// Deltas
+					dX = x2 - x1,
+					dMs = Math.max(t2 - t1, 1),
+
+					// Speeds
+					speedX = Math.max(Math.min(dX/dMs, 1), -1),
+
+					// Distance moved (Euclidean distance)
+					distance = Math.pow(x1-x2, 2);
+
+				if (distance > minDistance) {
+					// Momentum
+					var lastStepTime = new Date(),
+						limitStep = 100,
+						currentStep = limitStep,
+						interval = setInterval(function(){
+							if(currentStep -- == 0) {
+								clearInterval(interval);
+								return;
+							}
+
+							speedX *= (currentStep / 100);
+
+							var now = new Date(),
+								stepDuration = now.getTime() - lastStepTime.getTime(),
+								position = $target.position(),
+								newLeft = (position.left + (speedX * stepDuration / friction));
+
+							lastStepTime = now;
+							if(newLeft > 0) newLeft = 0;
+							else if(newLeft < (-_realWidth)) newLeft = -_realWidth;
+
+							$target.css('left', newLeft + "px");
+						}, Math.abs(speedX) * 2000 / 100);
+				}
+
+			};
+
+		return {
+			init: function() {
+				$dragPane.bind('mousedown', function(event) {
+					if(!dragging) {
+						beginEvent = event;
+						dragging = true;
+						mouseX = getOffsetX(event);
+						targetX = $target.offset().left;
+						a = event;
+						$dragPane.bind('mousemove', startTracking);
+					}
+					event.preventDefault();
+					
+				}).bind('mouseup', stopTracking).bind('mouseleave', function(event) {
+					if(dragging)
+						stopTracking(event);
+				});
+				return this;
+			},
+			destroy: function() {
+				$dragPane.unbind('mousedown mouseup');
+				return this;
+			}
+		};
+	}
+
+	function TimelineControl(config) {
+		return {
+
+		};
+	}
+
 	function init() {
 		var timeData = config.data,
 			events = [],
-			length = timeData.length;
+			length = timeData.length,
+			$target = $(config.target);
 
 		_minDate = _maxDate = timeData[length - 1];
 		events.push($.extend({}, timeData[length - 1]));
@@ -237,11 +393,13 @@
 			events.push(obj);
 			if(_maxDate < end) maxDate = end;
 			if(_minDate > start) minDate = start;
-
 		}
+
+		$target.find('.content').width(_realWidth = $target.width());
 
 		buildFacet();
 		buildEvent(events);
+		_timelineSlide = new TimelineSlide(config, $(config.target).find('.background'), $(config.target).find('.content')).init();
 	}
 
 	function buildFacet() {
@@ -253,6 +411,8 @@
 		for (var i = 1; i < 20; i++) {
 			date = _timelineFacet.getNextFacet(date);
 			width = _timelineFacet.getDistance(start, date, _realWidth);
+
+			console.log(date, width);
 
 			dom += '<div class="facet" style="left:' + width + 'px"><div class="facet-inner"></div><div>' + _timelineFacet.formatDate(date) + '</div></div>';
 		}
@@ -279,16 +439,21 @@
 		_millisecond = 7,
 		_maxDate,
 		_minDate,
-		_realWidth = 1920,
+		_realWidth = 1000,
 		config = {
+			target: '.timeline',
 			width: '100%',
 			height: '300px',
 			eventWidth: 150,
 			eventHeight: 40,
-			period: 604800000,
-			pivote: new Date('2014/6/6 00:00:00').getTime(),
+			period: new Date('2014/1/1').getTime() - new Date('2014/1/30').getTime(),
+			pivote: new Date('2014/6/5 12:00:00').getTime(),
 			periodOffset: 0,
 			unit: _day,
+			minDistance: 40,
+			backBtn: '',
+			zoomInBtn: '',
+			zoomOutBtn: '',
 			data:[
 				{
 					start: new Date('2014/6/6 12:00:00'),
@@ -296,14 +461,15 @@
 					title: 'test1'
 				},
 				{
-					start: new Date('2014/6/8 0:00:00'),
+					start: new Date('2014/6/14 2:00:00'),
 					end: new Date('2014/6/9 0:00:00'),
 					title: 'test2'
 				}
 			]
 		},
 		_timelineFacet = new TimelineFacet(config),
-		_timelineEvent = new TimelineEvent(config);
+		_timelineEvent = new TimelineEvent(config),
+		_timelineSlide;
 
 	init();
 	
