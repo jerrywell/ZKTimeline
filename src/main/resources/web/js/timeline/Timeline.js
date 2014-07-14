@@ -20,7 +20,46 @@
  *
  */
 timeline.Timeline = zk.$extends(zul.Widget, {
-	_text:'', //default value for text attribute
+	_year: 1,
+	_month: 2,
+	_day: 3,
+	_hour: 4,
+	_minute: 5,
+	_second: 6,
+	_millisecond: 7,
+	_maxDate,
+	_minDate,
+	_realWidth: 1000,
+	config: {
+		target: '.timeline',
+		width: '100%',
+		height: '300px',
+		eventWidth: 150,
+		eventHeight: 40,
+		period: new Date('2014/1/1').getTime() - new Date('2014/1/30').getTime(),
+		pivote: new Date('2014/6/5 12:00:00').getTime(),
+		periodOffset: 0,
+		unit: _day,
+		minDistance: 40,
+		backBtn: '',
+		zoomInBtn: '',
+		zoomOutBtn: '',
+		data:[
+			{
+				start: new Date('2014/6/6 12:00:00'),
+				end: new Date('2014/6/7 2:00:00'),
+				title: 'test1'
+			},
+			{
+				start: new Date('2014/6/14 2:00:00'),
+				end: new Date('2014/6/9 0:00:00'),
+				title: 'test2'
+			}
+		]
+	},
+	_timelineFacet: new TimelineFacet(config),
+	_timelineEvent: new TimelineEvent(config),
+	_timelineSlide;
 	
 	/**
 	 * Don't use array/object as a member field, it's a restriction for ZK object,

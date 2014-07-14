@@ -1,5 +1,6 @@
 package org.zkoss.zk.timeline;
 
+import java.util.Date;
 import java.util.Map;
 
 import org.zkoss.lang.Objects;
@@ -14,18 +15,57 @@ public class Timeline extends XulElement {
 		addClientEvent(Timeline.class, "onFoo", 0);
 	}
 	
-	/* Here's a simple example for how to implements a member field */
-
-	private String _text;
-
-	public String getText() {
-		return _text;
+	/*
+	 * about timeline navigation
+	 */
+	private Date _maxDateBound;
+	private Date _minDateBound;
+	// pivot is always in the middle of navigation
+	private Date _pivot = new Date();
+	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
+	private long _period = 604800000L;
+	
+	public Date getMaxDateBound() {
+		return _maxDateBound;
 	}
 
-	public void setText(String text) {
-		if (!Objects.equals(_text, text)) {
-			_text = text;
-			smartUpdate("text", _text);
+	public void setMaxDateBound(Date maxDateBound) {
+		if(!Objects.equals(_maxDateBound, maxDateBound)){	
+			this._maxDateBound = maxDateBound;
+			smartUpdate("maxDateBound", _maxDateBound);
+		}
+	}
+
+	public Date getMinDateBound() {
+		return _minDateBound;
+	}
+
+	public void setMinDateBound(Date minDateBound) {
+		if(!Objects.equals(_minDateBound, minDateBound)){	
+			this._minDateBound = minDateBound;
+			smartUpdate("minDateBound", _minDateBound);
+		}
+	}
+
+	public Date getPivot() {
+		return _pivot;
+	}
+
+	public void setPivot(Date pivot) {
+		if(!Objects.equals(_pivot, pivot)){	
+			this._pivot = pivot;
+			smartUpdate("pivot", _pivot);
+		}
+	}
+
+	public long getPeriod() {
+		return _period;
+	}
+
+	public void setPeriod(long period) {
+		if(!Objects.equals(_period, period)){	
+			this._period = period;
+			smartUpdate("period", _period);
 		}
 	}
 
@@ -35,7 +75,9 @@ public class Timeline extends XulElement {
 	throws java.io.IOException {
 		super.renderProperties(renderer);
 
-		render(renderer, "text", _text);
+		if(_period != 604800000L) render(renderer, "period", _period);
+		render(renderer, "pivot", _pivot);
+		
 	}
 	
 	public void service(AuRequest request, boolean everError) {

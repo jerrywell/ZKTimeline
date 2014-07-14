@@ -1,0 +1,478 @@
+<!doctype html>
+<html>
+	<style type="text/css">
+		.timeline{
+			width: 1800px;
+			height: 200px;
+			border: 1px #E5E5E5 solid;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.timeline .content{
+			left: 0px;
+			position: relative;
+		}
+
+		.timeline .content-cave{
+			height: 150px;
+		}
+
+		.timeline .small-facet{
+			height: 5px;
+			background-image: url("small-facet.png");
+			background-repeat: repeat;
+		}
+
+		.timeline .event{
+			height: 150px;
+			width: 150px;
+			border-left: 1px #E5E5E5 solid;
+			position: absolute;
+		}
+
+		.timeline .event:hover{
+			border-left-color: #999999;
+		}
+
+
+		.timeline .text:hover{
+			/*border-color: #B6B6B6;*/
+			/*background-color: white;*/
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: 0 -53px;
+			color: #0088CC;
+		}
+
+		.timeline .text{
+			height: 50px;
+			width: 153px;
+			/*border: 1px #D8D8D8 solid;*/
+			margin: 0px;
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: 0 0;
+			/*background-color: #EFEFEF;*/
+			color: #9999A3;
+			text-align: center;
+			-webkit-border-radius: 2px;  
+			-moz-border-radius: 2px;  
+			border-radius: 2px;  
+		}
+
+		.timeline .facet{
+			margin-top: 5px;
+			position: absolute;
+			text-indent: -10px;
+			font-weight: normal;
+			font-size: 10px;
+			color: #666;
+			font-size: 11px;
+			line-height: 11px;
+			font-weight: bold;
+		}
+
+		.timeline .facet-inner{
+			background: url("small-facet.png") repeat-y ;
+			height: 10px;
+			width: 100%;
+		}
+
+		.timeline .background{
+			position: absolute;
+			top: 0px;
+			width: 1800px;
+			height: 200px;
+			cursor: move;
+		}
+
+		.timeline .line{
+			left:898px;
+			height: 150px;
+			width: 4px;
+			background-color: #08c; 
+			position: absolute;
+			z-index: 10;
+		}
+
+		.timeline .indicator{
+			z-index: 20;
+			position: absolute;
+			left: 888px;
+			width: 24px;
+			height: 24px;
+			background-image: url(timeline.png?v4.4);
+			background-repeat: no-repeat;
+			background-position: -160px -48px;
+		}
+
+		.timeline .control{
+			z-index: 30;
+			position: absolute;
+			left: 0px;
+			top: 30px;
+			background-color: #fff;
+			border: 1px solid #ccc;
+			-webkit-box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+			-moz-box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+			box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+		}
+
+		.timeline .control > div{
+			padding: 6px;
+			opacity: 0.3;
+			filter: alpha(opacity=30);
+			cursor: pointer;
+		}
+
+		.timeline .control > div:hover{
+			opacity: 0.8;
+			filter: alpha(opacity=80);
+		}
+
+		.timeline .control .icon{
+			width: 16px;
+			height: 16px;
+			background-repeat: no-repeat;
+		}
+
+		.timeline .home .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -328px 0;
+		}
+
+		.timeline .zoom-in .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -256px 0;
+		}
+
+		.timeline .zoom-out .icon{
+			background-image: url(timeline.png?v4.4);
+			background-position: -280px 0;
+		}
+	</style>
+	<script type="text/javascript" src="jquery-1.11.1.js"></script>
+
+	<body>
+		<div class="timeline">
+			<div class="content">
+				<div class="content-cave">
+					<!-- <div class="event"><div class="text"></div></div> -->
+				</div>
+				<div class="small-facet"></div>
+				<div class="large-facet">
+					<!-- <div class="facet"><div class="facet-inner"></div><div></div></div> -->
+				</div>
+			</div>
+			<div class="background">
+				<div class="indicator"></div>
+				<div class="line"></div>
+			</div>
+			<div class="control">
+				<div class="home"><div class="icon"> </div></div>
+				<div class="zoom-in"><div class="icon"> </div></div>
+				<div class="zoom-out"><div class="icon"> </div></div>
+			</div>
+		</div>
+	</body>
+
+	<script type="text/javascript">
+(function(){
+
+	function TimelineFacet(config) {
+		var _safePx = 70,
+			_formatter = [
+				function(date) { return date.getYear();},
+				function(date) { return date.getMonth();},
+				function(date) { return (date.getMonth()+1) + '/' + date.getDate();},
+				function(date) { return date.getHours();},
+				function(date) { return date.getMinutes();},
+				function(date) { return date.getSeconds();},
+				function(date) { return date.getMilliseconds();}
+			],
+			period = config.period,
+			pivote = config.pivote,
+			periodOffset = config.periodOffset,
+			unit = config.unit,
+			width = config.width,
+			height = config.height;
+
+		return {
+			getDistanceFromStart: function(facetTime, realWidth) {
+				return Math.abs(facetTime.getTime() - this.getStartTime()) / this.getMillisecondsPerPx(realWidth);
+			},
+			getDistance: function(startTime, facetTime, realWidth) {
+				console.log(Math.abs(facetTime.getTime() - startTime.getTime()), this.getMillisecondsPerPx(realWidth));
+				return Math.abs(facetTime.getTime() - startTime.getTime()) / this.getMillisecondsPerPx(realWidth);
+			},
+			getNextFacet: function(startTime) {
+				var leftPx = -1,
+					facetTime = new Date(startTime),
+					facetTimeArr = [];
+
+				switch(unit + 1) {
+					case 2:
+						facetTime.setMonth(1);
+					case 3:
+						facetTime.setDate(1);
+					case 4: 
+						facetTime.setHours(0);
+					case 5: 
+						facetTime.setMinutes(0);
+					case 6: 
+						facetTime.setSeconds(0);
+					case 7: 
+						facetTime.setMilliseconds(0);
+				}
+
+				facetTimeArr = [facetTime.getFullYear(), facetTime.getMonth(), facetTime.getDate(),
+					facetTime.getHours(), facetTime.getMinutes(), facetTime.getSeconds(), facetTime.getMilliseconds()];
+
+				facetTimeArr[unit - 1] = facetTimeArr[unit - 1] + 1;
+
+				return new Date(facetTimeArr[0], facetTimeArr[1], facetTimeArr[2], facetTimeArr[3], facetTimeArr[4], facetTimeArr[5], facetTimeArr[6]);
+			},
+			getMillisecondsPerPx: function(realWidth) {
+				console.log(period, realWidth);
+				return period / realWidth;
+			},
+			getSafeMs: function() {
+				return getMilisecondsPerPx * _safePx;
+			},
+			getStartTime: function() {
+				return new Date(pivote - periodOffset);
+			},
+			getEndTime: function() {
+				return new Date(this.getStartTime().getTime() + periodOffset);
+			},
+			getMiddleTime: function() {
+				var start = getStartTime().getTime();
+				return new Date((getEndTime().getTime() - start)/2 + start);
+			},
+			formatDate: function(date) {
+				return _formatter[unit - 1](date);
+			}
+		};
+	}
+
+	function TimelineEvent(config) {
+		return {
+			sort: function(events) {
+				events.sort(function(e1, e2) {
+					var start1 = e1.start.getTime(),
+						start2 = e2.start.getTime(),
+						end1 = e1.end.getTime(),
+						end2 = e2.end.getTime();
+
+					if(start1 != start2)
+						return start1 - start2;
+					else
+						return end1 - end2;
+				});
+			}
+		};
+	}
+
+	function TimelineSlide(config, $dragPane, $target) {
+		if(!$target) $target = $dragPane;
+		var dragging = false,
+			mouseX = 0,
+			targetX = 0, 
+			minDistance = config.minDistance,
+			friction = 1,
+			beginEvent,
+			getOffsetX = function(event) {
+				// firefox doesn't have offsetX
+				return event.offsetX || event.clientX - $dragPane.offset().left;
+			},
+			startTracking = function(event) {
+				var left = targetX + getOffsetX(event) - mouseX;
+				if(left > 0 || left < (-_realWidth)) 
+					return;
+				$target.css('left', left + 'px');
+			},
+			stopTracking = function(event) {
+				$dragPane.unbind('mousemove');
+				dragging = false;
+				doMomentum(beginEvent, event);
+				beginEvent = null;
+			},
+			doMomentum = function(event1, event2) {
+				if(!(event1 && event2)) return;
+
+				var x1 = getOffsetX(event1),
+					t1 = event1.timeStamp,
+					x2 = getOffsetX(event2),
+					t2 = event2.timeStamp,
+
+					// Deltas
+					dX = x2 - x1,
+					dMs = Math.max(t2 - t1, 1),
+
+					// Speeds
+					speedX = Math.max(Math.min(dX/dMs, 1), -1),
+
+					// Distance moved (Euclidean distance)
+					distance = Math.pow(x1-x2, 2);
+
+				if (distance > minDistance) {
+					// Momentum
+					var lastStepTime = new Date(),
+						limitStep = 100,
+						currentStep = limitStep,
+						interval = setInterval(function(){
+							if(currentStep -- == 0) {
+								clearInterval(interval);
+								return;
+							}
+
+							speedX *= (currentStep / 100);
+
+							var now = new Date(),
+								stepDuration = now.getTime() - lastStepTime.getTime(),
+								position = $target.position(),
+								newLeft = (position.left + (speedX * stepDuration / friction));
+
+							lastStepTime = now;
+							if(newLeft > 0) newLeft = 0;
+							else if(newLeft < (-_realWidth)) newLeft = -_realWidth;
+
+							$target.css('left', newLeft + "px");
+						}, Math.abs(speedX) * 2000 / 100);
+				}
+
+			};
+
+		return {
+			init: function() {
+				$dragPane.bind('mousedown', function(event) {
+					if(!dragging) {
+						beginEvent = event;
+						dragging = true;
+						mouseX = getOffsetX(event);
+						targetX = $target.offset().left;
+						a = event;
+						$dragPane.bind('mousemove', startTracking);
+					}
+					event.preventDefault();
+					
+				}).bind('mouseup', stopTracking).bind('mouseleave', function(event) {
+					if(dragging)
+						stopTracking(event);
+				});
+				return this;
+			},
+			destroy: function() {
+				$dragPane.unbind('mousedown mouseup');
+				return this;
+			}
+		};
+	}
+
+	function TimelineControl(config) {
+		return {
+
+		};
+	}
+
+	function init() {
+		var timeData = config.data,
+			events = [],
+			length = timeData.length,
+			$target = $(config.target);
+
+		_minDate = _maxDate = timeData[length - 1];
+		events.push($.extend({}, timeData[length - 1]));
+		// bulid event
+		for (var i = timeData.length - 2; i >= 0; i--) {
+			var obj = $.extend({}, timeData[i]),
+				start = obj.start,
+				end = obj.end;
+
+			events.push(obj);
+			if(_maxDate < end) maxDate = end;
+			if(_minDate > start) minDate = start;
+		}
+
+		$target.find('.content').width(_realWidth = $target.width());
+
+		buildFacet();
+		buildEvent(events);
+		_timelineSlide = new TimelineSlide(config, $(config.target).find('.background'), $(config.target).find('.content')).init();
+	}
+
+	function buildFacet() {
+		var start = _timelineFacet.getStartTime(),
+			date = new Date(config.pivote),
+			width = 0,
+			dom = '';
+
+		for (var i = 1; i < 20; i++) {
+			date = _timelineFacet.getNextFacet(date);
+			width = _timelineFacet.getDistance(start, date, _realWidth);
+
+			console.log(date, width);
+
+			dom += '<div class="facet" style="left:' + width + 'px"><div class="facet-inner"></div><div>' + _timelineFacet.formatDate(date) + '</div></div>';
+		}
+
+		$('.large-facet').append(dom);
+	}
+
+	function buildEvent(events) {
+		var html = '';
+		for(var i = 0, length = events.length; i < length; i++) {
+			var event = events[i];
+			html += '<div class="event" style="left:' + _timelineFacet.getDistanceFromStart(event.start, _realWidth) + 'px"><div class="text">' + event.title + '</div></div>'
+		}
+
+		$('.content-cave').append(html);
+	}
+
+	var _year = 1,
+		_month = 2,
+		_day = 3,
+		_hour = 4,
+		_minute = 5,
+		_second = 6,
+		_millisecond = 7,
+		_maxDate,
+		_minDate,
+		_realWidth = 1000,
+		config = {
+			target: '.timeline',
+			width: '100%',
+			height: '300px',
+			eventWidth: 150,
+			eventHeight: 40,
+			period: new Date('2014/1/1').getTime() - new Date('2014/1/30').getTime(),
+			pivote: new Date('2014/6/5 12:00:00').getTime(),
+			periodOffset: 0,
+			unit: _day,
+			minDistance: 40,
+			backBtn: '',
+			zoomInBtn: '',
+			zoomOutBtn: '',
+			data:[
+				{
+					start: new Date('2014/6/6 12:00:00'),
+					end: new Date('2014/6/7 2:00:00'),
+					title: 'test1'
+				},
+				{
+					start: new Date('2014/6/14 2:00:00'),
+					end: new Date('2014/6/9 0:00:00'),
+					title: 'test2'
+				}
+			]
+		},
+		_timelineFacet = new TimelineFacet(config),
+		_timelineEvent = new TimelineEvent(config),
+		_timelineSlide;
+
+	init();
+	
+})();
+	</script>
+</html>

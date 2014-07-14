@@ -1,6 +1,16 @@
 <zk>
-	<window title="Hello World!!" border="normal" width="300px"
+	<style type="text/css">
+		div{
+			background: repeating-linear-gradient(
+			  0deg,
+			  #606dbc,
+			  #606dbc 10px
+			);
+		}
+	</style>
+	<div></div>
+	<!-- <window title="Hello World!!" border="normal" width="300px"
 		apply="test.ctrl.DemoWindowComposer">
 		<timeline id="myComp" />
-	</window>
+	</window> -->
 </zk>
