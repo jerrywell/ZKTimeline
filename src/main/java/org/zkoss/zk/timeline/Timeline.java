@@ -1,6 +1,11 @@
 package org.zkoss.zk.timeline;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import org.zkoss.lang.Objects;
@@ -12,7 +17,7 @@ import org.zkoss.zul.impl.XulElement;
 public class Timeline extends XulElement {
 
 	static {
-		addClientEvent(Timeline.class, "onFoo", 0);
+		//addClientEvent(Timeline.class, "onFoo", 0);
 	}
 	
 	/*
@@ -24,6 +29,38 @@ public class Timeline extends XulElement {
 	private Date _pivot = new Date();
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
 	private long _period = 604800000L;
+	private List<TimelineEvent> _timelineEvents;
+	private List<String> _facets;
+	private TimeUnit unit = TimeUnit.DAY;
+	private String _format;
+	
+	public Timeline(){
+		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+		try {
+			_minDateBound = dateFormat.parse("2010/1/1");
+			_maxDateBound = dateFormat.parse("2020/12/31");
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		_timelineEvents = new ArrayList<TimelineEvent>();
+		setWidth("1000px");
+		setHeight("200px");
+	}
+	
+	/*
+	 * getter and setter
+	 */
+	
+	public void setTimelineEvents(List<TimelineEvent> timelineEvents) {
+		if(!Objects.equals(_timelineEvents, timelineEvents)){	
+			this._timelineEvents = timelineEvents;
+			smartUpdate("timelineEvents", _timelineEvents);
+		}
+	}
+	
+	public List<TimelineEvent> getTimelineEvents() {
+		return _timelineEvents;
+	}
 	
 	public Date getMaxDateBound() {
 		return _maxDateBound;
@@ -68,15 +105,45 @@ public class Timeline extends XulElement {
 			smartUpdate("period", _period);
 		}
 	}
+	
+	public String getFormat() {
+		return _format;
+	}
 
+	public void setFormat(String format) {
+		if(!Objects.equals(_format, format)){	
+			this._format = format;
+			smartUpdate("format", _format);
+		}
+	}
 
-	//super//
+	/*
+	 * self method
+	 */
+	
+	public void addTimelineEvent(TimelineEvent event) {
+		_timelineEvents.add(event);
+		smartUpdate("timelineEvent", event);
+	}
+	
+	/*
+	 * component method
+	 */
+	
 	protected void renderProperties(org.zkoss.zk.ui.sys.ContentRenderer renderer)
 	throws java.io.IOException {
 		super.renderProperties(renderer);
 
-		if(_period != 604800000L) render(renderer, "period", _period);
+		render(renderer, "maxDateBound", _maxDateBound);
+		render(renderer, "minDateBound", _minDateBound);
+		
+		if(_period != 604800000L)
+			render(renderer, "period", _period);
+		
 		render(renderer, "pivot", _pivot);
+		
+		if(_timelineEvents.size() != 0)
+			render(renderer, "timelineEvents", _timelineEvents);
 		
 	}
 	
@@ -97,6 +164,13 @@ public class Timeline extends XulElement {
 	 */
 	public String getZclass() {
 		return (this._zclass != null ? this._zclass : "z-timeline");
+	}
+	
+	/*
+	 * inner class
+	 */
+	public enum TimeUnit{
+		YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND
 	}
 }
 

@@ -20,46 +20,12 @@
  *
  */
 timeline.Timeline = zk.$extends(zul.Widget, {
-	_year: 1,
-	_month: 2,
-	_day: 3,
-	_hour: 4,
-	_minute: 5,
-	_second: 6,
-	_millisecond: 7,
-	_maxDate,
-	_minDate,
-	_realWidth: 1000,
-	config: {
-		target: '.timeline',
-		width: '100%',
-		height: '300px',
-		eventWidth: 150,
-		eventHeight: 40,
-		period: new Date('2014/1/1').getTime() - new Date('2014/1/30').getTime(),
-		pivote: new Date('2014/6/5 12:00:00').getTime(),
-		periodOffset: 0,
-		unit: _day,
-		minDistance: 40,
-		backBtn: '',
-		zoomInBtn: '',
-		zoomOutBtn: '',
-		data:[
-			{
-				start: new Date('2014/6/6 12:00:00'),
-				end: new Date('2014/6/7 2:00:00'),
-				title: 'test1'
-			},
-			{
-				start: new Date('2014/6/14 2:00:00'),
-				end: new Date('2014/6/9 0:00:00'),
-				title: 'test2'
-			}
-		]
-	},
-	_timelineFacet: new TimelineFacet(config),
-	_timelineEvent: new TimelineEvent(config),
-	_timelineSlide;
+	_timelineEvents: [],
+	_pivot: null,
+	_period: 604800000,
+	_minDateBound: new Date('2010/1/1'),
+	_maxDateBound: new Date('2020/12/31'),
+	
 	
 	/**
 	 * Don't use array/object as a member field, it's a restriction for ZK object,
@@ -69,6 +35,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 *
 	 * TODO:check array or object , must be one of them ...I forgot. -_- by Tony
 	 */
+	
+	$init: function() {
+		this.$supers('$init', arguments);
+		console.log('test in init...');
+	},
 	
 	$define: {
 		/**
@@ -81,12 +52,41 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 * It's more clear.
 		 *
 		 */
-		text: function() { //this function will be called after setText() .
-		
+		maxDateBound: function() {
+			console.log('test');
 			if(this.desktop) {
 				//updated UI here.
 			}
-		}
+		},
+		
+		minDateBound: function() {
+			console.log('test');
+			if(this.desktop) {
+				//updated UI here.
+			}
+		},
+		
+		timelineEvents: function() {
+			console.log('test');
+			if(this.desktop) {
+				//updated UI here.
+			}
+		},
+		
+		timelineEvent: function() {
+			if(this.desktop) {
+				//updated UI here.
+			}
+		},
+		
+		pivot: function() {
+			console.log('test');
+			if(this.desktop) {
+				//updated UI here.
+			}
+		},
+		
+		
 	},
 	/**
 	 * If you don't like the way in $define ,
@@ -94,6 +94,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 *
 	 * Like the example below, they are the same as we mentioned in $define section.
 	 */
+	setTimelineEvent: function(val) {
+		_timelineEvents.push(val);
+		addTimelineEvent(val);
+	},
 	/*
 	getText:function(){ return this._text; },
 	setText:function(val){
@@ -103,6 +107,24 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		}
 	},
 	*/
+	
+	/*
+	 * self method
+	 */
+	_getInnerWidth: function() {
+		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
+			periodRatio = period / this._period,
+			width = zk.parseInt(this._width);
+
+		return periodRatio < 1 ? width : Math.ceil(periodRatio * width);
+	},
+	_calculateFacet: function() {
+		// left space for large facet
+		
+	}
+	
+	
+	
 	bind_: function () {
 		/**
 		 * For widget lifecycle , the super bind_ should be called

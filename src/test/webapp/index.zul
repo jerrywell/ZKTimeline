@@ -1,16 +1,19 @@
 <zk>
-	<style type="text/css">
-		div{
-			background: repeating-linear-gradient(
-			  0deg,
-			  #606dbc,
-			  #606dbc 10px
-			);
-		}
-	</style>
 	<div></div>
-	<!-- <window title="Hello World!!" border="normal" width="300px"
-		apply="test.ctrl.DemoWindowComposer">
-		<timeline id="myComp" />
-	</window> -->
+	<zscript><![CDATA[
+	    import org.zkoss.zk.timeline.*;
+        List eee = new ArrayList();
+        TimelineEvent e1 = new TimelineEvent();
+        e1.setTitle("e1");
+        e1.setStartDate(new Date());
+        e1.setStopDate(new Date());
+        TimelineEvent e2 = new TimelineEvent();
+        e2.setTitle("e2");
+        e2.setStartDate(new Date());
+        eee.add(e1);
+        eee.add(e2);
+    ]]></zscript>
+ 	<window title="Hello World!!" border="normal">
+		<timeline id="myComp" timelineEvents="${eee}" width="1200px" height="200px"/>
+	</window>
 </zk>
