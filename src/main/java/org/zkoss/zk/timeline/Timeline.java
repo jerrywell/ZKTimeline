@@ -32,7 +32,14 @@ public class Timeline extends XulElement {
 	private List<TimelineEvent> _timelineEvents;
 	private List<String> _facets;
 	private TimeUnit unit = TimeUnit.DAY;
-	private String _format;
+	
+	private String _yearFormat = "yyyy";
+	private String _monthFormat = "MM";
+	private String _dayFormat = "dd";
+	private String _hourFormat = "hh";
+	private String _minuteFormat = "mm";
+	private String _secondFormat = "ss";
+	private String _millisecondFormat = "SS";
 	
 	public Timeline(){
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
@@ -106,14 +113,80 @@ public class Timeline extends XulElement {
 		}
 	}
 	
-	public String getFormat() {
-		return _format;
+	public String getYearFormat() {
+		return _yearFormat;
 	}
 
-	public void setFormat(String format) {
-		if(!Objects.equals(_format, format)){	
-			this._format = format;
-			smartUpdate("format", _format);
+	public void setYearFormat(String yearFormat) {
+		if(!Objects.equals(_yearFormat, yearFormat)){	
+			this._yearFormat = yearFormat;
+			smartUpdate("yearFormat", _yearFormat);
+		}
+	}
+	
+	public String getMonthFormat() {
+		return _monthFormat;
+	}
+
+	public void setMonthFormat(String monthFormat) {
+		if(!Objects.equals(_monthFormat, monthFormat)){	
+			this._monthFormat = monthFormat;
+			smartUpdate("monthFormat", _monthFormat);
+		}
+	}
+	
+	public String getDayFormat() {
+		return _monthFormat;
+	}
+
+	public void setDayFormat(String dayFormat) {
+		if(!Objects.equals(_dayFormat, dayFormat)){	
+			this._dayFormat = dayFormat;
+			smartUpdate("dayFormat", _dayFormat);
+		}
+	}
+	
+	public String getHourFormat() {
+		return _hourFormat;
+	}
+
+	public void setHourFormat(String hourFormat) {
+		if(!Objects.equals(_hourFormat, hourFormat)){	
+			this._hourFormat = hourFormat;
+			smartUpdate("hourFormat", _hourFormat);
+		}
+	}
+	
+	public String getMinuteFormat() {
+		return _minuteFormat;
+	}
+
+	public void setMinuteFormat(String minuteFormat) {
+		if(!Objects.equals(_minuteFormat, minuteFormat)){	
+			this._minuteFormat = minuteFormat;
+			smartUpdate("minuteFormat", _minuteFormat);
+		}
+	}
+	
+	public String getSecondFormat() {
+		return _secondFormat;
+	}
+
+	public void setSecondFormat(String secondFormat) {
+		if(!Objects.equals(_secondFormat, secondFormat)){	
+			this._secondFormat = secondFormat;
+			smartUpdate("secondFormat", _secondFormat);
+		}
+	}
+	
+	public String getmillisecondFormat() {
+		return _millisecondFormat;
+	}
+
+	public void setMillisecondFormat(String millisecondFormat) {
+		if(!Objects.equals(_millisecondFormat, millisecondFormat)){	
+			this._millisecondFormat = millisecondFormat;
+			smartUpdate("millisecondFormat", _millisecondFormat);
 		}
 	}
 
@@ -144,6 +217,14 @@ public class Timeline extends XulElement {
 		
 		if(_timelineEvents.size() != 0)
 			render(renderer, "timelineEvents", _timelineEvents);
+		
+		if(!_yearFormat.equals("yyyy")) render(renderer, "yearFormat", _yearFormat);
+		if(!_monthFormat.equals("MM")) render(renderer, "monthFormat", _monthFormat);
+		if(!_dayFormat.equals("dd")) render(renderer, "dayFormat", _dayFormat);
+		if(!_hourFormat.equals("hh")) render(renderer, "hourFormat", _hourFormat);
+		if(!_minuteFormat.equals("mm")) render(renderer, "minuteFormat", _minuteFormat);
+		if(!_secondFormat.equals("ss")) render(renderer, "secondFormat", _secondFormat);
+		if(!_millisecondFormat.equals("SS")) render(renderer, "millisecondFormat", _millisecondFormat);
 		
 	}
 	

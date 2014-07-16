@@ -17,8 +17,8 @@ function (out) {
 	out.push('<div ', this.domAttrs_(), '>');
 	
 		out.push('<div class="', zcls, '-content" id="', uuid, '-content" ' + '>');
-			out.push('<div class="', zcls, '-content-inside" id="', uuid, '-content-inside" style="width:' + this._getInnerWidth() + 'px;height:' + this._height + '">');
-				out.push('<div class="', zcls, '-content-cave" id="', uuid, '-content-cave" ' + '>');
+			out.push('<div class="', zcls, '-content-inside" id="', uuid, '-content-inside">');
+				out.push('<div class="', zcls, '-content-cave" id="', uuid, '-content-cave">');
 				
 				for (var w = this.timelineEvents; w; w = w.nextSibling){
 					out.push('<div class="', zcls, '-outer">');

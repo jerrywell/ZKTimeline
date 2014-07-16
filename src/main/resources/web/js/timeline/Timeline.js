@@ -22,10 +22,34 @@
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineEvents: [],
 	_pivot: null,
-	_period: 604800000,
+	_period: (604800000/7) * 1,
 	_minDateBound: new Date('2010/1/1'),
 	_maxDateBound: new Date('2020/12/31'),
 	
+	_yearFormat: "yyyy",
+	_monthFormat: "MM",
+	_dayFormat: "dd",
+	_hourFormat: "hh",
+	_minuteFormat: "mm",
+	_secondFormat: "ss",
+	_millisecondFormat: "SS",
+	
+	_year: 0,
+	_month: 1,
+	_day: 2,
+	_hour: 3,
+	_minute: 4,
+	_second: 5,
+	_millisecond: 6,
+	_unit: [
+		365 * 24 * 60 * 60 * 1000,
+		30 * 24 * 60 * 60 * 1000,
+		24 * 60 * 60 * 1000,
+		60 * 60 * 1000,
+		60 * 1000,
+		1000,
+		1
+	],
 	
 	/**
 	 * Don't use array/object as a member field, it's a restriction for ZK object,
@@ -39,6 +63,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	$init: function() {
 		this.$supers('$init', arguments);
 		console.log('test in init...');
+		this.listen({
+			onAfterSize: this
+		});
 	},
 	
 	$define: {
@@ -111,17 +138,49 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	/*
 	 * self method
 	 */
-	_getInnerWidth: function() {
+	_recalculate: function() {
+		this._calculateInsideWidth();
+		this._buildMainFacet();
+	},
+	_getFacetMainLevel: function() {
+		// from year to second
+		var unit = this._unit,
+			period = this._period,
+			i = 0,
+			length = unit.length - 1;
+		
+		for(; i < length; i++)
+			if(period / (unit[i]*2) >= 1)
+				return i;
+		return this._millisecond;
+	},
+	_getNextFacet: function(startTime, unit, includeSelf) {
+		var unitTime = Math.round(startTime / unit) * unit;
+
+		if(includeSelf && unitTime == startTime)
+			return startTime;
+		return unitTime + unit;
+	},
+	_buildMainFacet: function() {
+		var unitIndex = this._getFacetMainLevel(),
+			unit = this._unit[unitIndex],
+			pxPerMs = jq(this).width() / this._period,
+			pxPerUnit = pxPerMs * unit,
+			getNextFacet = this._getNextFacet,
+			facet = getNextFacet(this._maxDateBound.getTime(), unit, true);
+		
+		// need to check this result
+		// result: 1609344000000 1609344000000 1609347600000 
+		console.log(this._maxDateBound.getTime(), facet, getNextFacet(facet, unit));
+		
+	},
+	_calculateInsideWidth: function() {
 		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
 			periodRatio = period / this._period,
-			width = zk.parseInt(this._width);
-
-		return periodRatio < 1 ? width : Math.ceil(periodRatio * width);
+			width = jq(this).width(),
+			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
+		jq(this.$n('content-inside')).width(innerWidth);
 	},
-	_calculateFacet: function() {
-		// left space for large facet
-		
-	}
 	
 	
 	
@@ -132,7 +191,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 * DONT'T forget to call supers in bind_ , or you will get error.
 		 */
 		this.$supers(timeline.Timeline,'bind_', arguments);
-	
 		//A example for domListen_ , REMEMBER to do domUnlisten in unbind_.
 		//this.domListen_(this.$n("cave"), "onClick", "_doItemsClick");
 	},
@@ -159,6 +217,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		widget event, more detail 
 		please refer to http://books.zkoss.org/wiki/ZK%20Client-side%20Reference/Notifications
 	 */
+	onSize: function(evt) {
+		this.$supers('onSize', arguments);
+		this._recalculate();
+	},
 	doClick_: function (evt) {
 		this.$super('doClick_', evt, true);//the super doClick_ should be called
 		this.fire('onFoo', {foo: 'myData'});
