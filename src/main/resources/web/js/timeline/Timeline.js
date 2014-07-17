@@ -155,11 +155,15 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		return this._millisecond;
 	},
 	_getNextFacet: function(startTime, unit, includeSelf) {
-		var unitTime = Math.round(startTime / unit) * unit;
+		var mod = startTime % unit, 
+			unitTime = Math.floor(startTime / unit) * unit;
 
-		if(includeSelf && unitTime == startTime)
-			return startTime;
+		if(includeSelf && mod == 0)
+			return unitTime;
 		return unitTime + unit;
+	},
+	_getPxDistance: function(t1, t2) {
+		
 	},
 	_buildMainFacet: function() {
 		var unitIndex = this._getFacetMainLevel(),
@@ -169,10 +173,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			getNextFacet = this._getNextFacet,
 			facet = getNextFacet(this._maxDateBound.getTime(), unit, true);
 		
-		// need to check this result
-		// result: 1609344000000 1609344000000 1609347600000 
 		console.log(this._maxDateBound.getTime(), facet, getNextFacet(facet, unit));
-		
 	},
 	_calculateInsideWidth: function() {
 		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
