@@ -26,7 +26,7 @@ public class Timeline extends XulElement {
 	private Date _maxDateBound;
 	private Date _minDateBound;
 	// pivot is always in the middle of navigation
-	private Date _pivot = new Date();
+	private Date _pivot;
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
 	private long _period = 604800000L;
 	private List<TimelineEvent> _timelineEvents;
@@ -96,10 +96,8 @@ public class Timeline extends XulElement {
 	}
 
 	public void setPivot(Date pivot) {
-		if(!Objects.equals(_pivot, pivot)){	
-			this._pivot = pivot;
-			smartUpdate("pivot", _pivot);
-		}
+		this._pivot = pivot;
+		smartUpdate("pivot", _pivot);
 	}
 
 	public long getPeriod() {

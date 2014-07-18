@@ -28,8 +28,30 @@
 	background-repeat: repeat;
 }
 
+.z-timeline .z-timeline-main-facet{
+	width: 100%;
+	height: 30px;
+}
+
+.z-timeline .z-timeline-main-facet .z-timeline-facet{
+	padding-left: 5px;
+	border-left: 1px solid gray;
+}
+
 .z-timeline .z-timeline-large-facet{
 	width: 100%;
+	height: 30px;
+	font-size: 20px;
+}
+
+.z-timeline .z-timeline-facet{
+	position: absolute;
+}
+
+.z-timeline .z-timeline-main-facet .z-timeline-fbg{
+	background-image: url(${c:encodeThemeURL('~./zul/img/timeline/small-facet.png')});
+	background-repeat:repeat-y;
+	height: 10px;
 }
 
 /*
@@ -70,6 +92,7 @@
 	border-radius: 2px;  
 }
 
+/*
 .z-timeline .z-timeline-facet{
 	margin-top: 5px;
 	position: absolute;
@@ -81,6 +104,7 @@
 	line-height: 11px;
 	font-weight: bold;
 }
+*/
 
 .z-timeline .z-timeline-facet-inner{
 	background: url("small-facet.png") repeat-y ;

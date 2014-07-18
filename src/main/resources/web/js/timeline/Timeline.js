@@ -22,9 +22,11 @@
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineEvents: [],
 	_pivot: null,
-	_period: (604800000/7) * 1,
+	_period: (604800000/7) * 7,
 	_minDateBound: new Date('2010/1/1'),
 	_maxDateBound: new Date('2020/12/31'),
+	
+	_multiply: 2,
 	
 	_yearFormat: "yyyy",
 	_monthFormat: "MM",
@@ -80,21 +82,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 *
 		 */
 		maxDateBound: function() {
-			console.log('test');
 			if(this.desktop) {
 				//updated UI here.
 			}
 		},
 		
 		minDateBound: function() {
-			console.log('test');
 			if(this.desktop) {
 				//updated UI here.
 			}
 		},
 		
 		timelineEvents: function() {
-			console.log('test');
 			if(this.desktop) {
 				//updated UI here.
 			}
@@ -107,7 +106,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		},
 		
 		pivot: function() {
-			console.log('test');
+			console.log('test', this.pivot, this._pivot);
 			if(this.desktop) {
 				//updated UI here.
 			}
@@ -138,9 +137,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	/*
 	 * self method
 	 */
-	_recalculate: function() {
-		this._calculateInsideWidth();
-		this._buildMainFacet();
+	recalculate: function() {
+		
+		
+		this.calculateInsideWidth();
+		this.buildFacet();
 	},
 	_getFacetMainLevel: function() {
 		// from year to second
@@ -158,24 +159,67 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		var mod = startTime % unit, 
 			unitTime = Math.floor(startTime / unit) * unit;
 
+		console.log(mod, startTime, unit);
+		
 		if(includeSelf && mod == 0)
 			return unitTime;
 		return unitTime + unit;
 	},
-	_getPxDistance: function(t1, t2) {
-		
+	_getPxDistance: function(t1, t2, pxPerMs) {
+		if(t1 instanceof Date) t1 = t1.getTime();
+		if(t2 instanceof Date) t2 = t2.getTime();
+		return Math.abs(t1 - t2) * pxPerMs;
 	},
-	_buildMainFacet: function() {
-		var unitIndex = this._getFacetMainLevel(),
-			unit = this._unit[unitIndex],
+	_getFormat: function(unitLevel) {
+		switch(unitLevel) {
+			case this._year: return this._yearFormat;
+			case this._month: return this._monthFormat; break;
+			case this._day: return this._dayFormat; break;
+			case this._hour: return this.hourFormat; break;
+			case this._minute: return this.minuteFormat; break;
+			case this._second: return this.secondFormat; break;
+			case this._millisecond: return this.millisecondFormat; break;
+		}
+	},
+	buildFacet: function() {
+		var mainUnitLevel = this._getFacetMainLevel(),
+			largeUnitLevel = mainUnitLevel - 1;
+		
+		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
+		if(largeUnitLevel >= this._year)
+			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
+	},
+	_buildFacet: function(unitLevel, cave) {
+		var unit = this._unit[unitLevel],
 			pxPerMs = jq(this).width() / this._period,
 			pxPerUnit = pxPerMs * unit,
-			getNextFacet = this._getNextFacet,
-			facet = getNextFacet(this._maxDateBound.getTime(), unit, true);
-		
-		console.log(this._maxDateBound.getTime(), facet, getNextFacet(facet, unit));
+			minDateBound = this._minDateBound.getTime(),
+			maxDateBound = this._maxDateBound.getTime(),
+			halfPeriod = this._period / 2,
+			pivot = this._pivot.getTime(),
+			leftBound = pivot - halfPeriod,
+			rightBound = pivot + halfPeriod,
+			multiply = this._multiply,
+			period = this._period,
+			mLeftBound = leftBound - (period * (multiply - 1)),
+			mRightBound = rightBound + (period * (multiply - 1)),
+			realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound,
+			realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound,
+			facet = this._getNextFacet(realLeftBound, unit, true),
+			
+			format = this._getFormat(unitLevel),
+			calendar = new zk.fmt.Calendar();
+				
+		for (; facet < realRightBound ; facet = this._getNextFacet(facet, unit)) {
+			var left = this._getPxDistance(realLeftBound, facet, pxPerMs);
+			console.log(new Date(facet), left);
+
+			jq('<div></div>').html(calendar.formatDate(new Date(facet), format))
+				.css('left',left).addClass(this.$s('facet'))
+				.appendTo(cave);
+		}
 	},
-	_calculateInsideWidth: function() {
+	calculateInsideWidth: function() {
 		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
 			periodRatio = period / this._period,
 			width = jq(this).width(),
@@ -220,7 +264,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 */
 	onSize: function(evt) {
 		this.$supers('onSize', arguments);
-		this._recalculate();
+		this.recalculate();
 	},
 	doClick_: function (evt) {
 		this.$super('doClick_', evt, true);//the super doClick_ should be called

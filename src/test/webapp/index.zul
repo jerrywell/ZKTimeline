@@ -12,8 +12,11 @@
         e2.setStartDate(new Date());
         eee.add(e1);
         eee.add(e2);
+        Date d = new Date();
     ]]></zscript>
  	<window title="Hello World!!" border="normal">
-		<timeline id="myComp" timelineEvents="${eee}" width="1200px" height="200px"/>
+		<timeline id="myComp" pivot="${d}" timelineEvents="${eee}" width="1200px" height="200px"/>
 	</window>
+	
+	<datebox value="${d }"></datebox>
 </zk>
