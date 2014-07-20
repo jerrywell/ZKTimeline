@@ -1,5 +1,4 @@
 <zk>
-	<div></div>
 	<zscript><![CDATA[
 	    import org.zkoss.zk.timeline.*;
         List eee = new ArrayList();
@@ -14,9 +13,27 @@
         eee.add(e2);
         Date d = new Date();
     ]]></zscript>
- 	<window title="Hello World!!" border="normal">
+ 	<window id="win" title="Hello World!!" border="normal">
 		<timeline id="myComp" pivot="${d}" timelineEvents="${eee}" width="1200px" height="200px"/>
-	</window>
+		<zscript><![CDATA[
+			public void plus(){
+				myComp.setPeriod(myComp.getPeriod() + Math.round(myComp.getPeriod() * 0.1));
+			}
+			
+			public void minus(){
+				myComp.setPeriod(myComp.getPeriod() - Math.round(myComp.getPeriod() * 0.1));
+			}
 	
+		]]></zscript>
+		<button label="plus" onClick="plus()"></button>
+		<button label="minus" onClick="minus()"></button>
+	</window>
+	<button label="change vision" onClick="changeVision()"></button>
 	<datebox value="${d }"></datebox>
+	<zscript><![CDATA[
+		boolean visible = true;
+		public void changeVision() {
+			win.setVisible((visible = !visible));
+		}
+	]]></zscript>
 </zk>

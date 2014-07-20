@@ -27,6 +27,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_maxDateBound: new Date('2020/12/31'),
 	
 	_multiply: 2,
+	_dirtyLevel: 4,
 	
 	_yearFormat: "yyyy",
 	_monthFormat: "MM",
@@ -62,14 +63,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 * TODO:check array or object , must be one of them ...I forgot. -_- by Tony
 	 */
 	
-	$init: function() {
-		this.$supers('$init', arguments);
-		console.log('test in init...');
-		this.listen({
-			onAfterSize: this
-		});
-	},
-	
 	$define: {
 		/**
 		 * The member in $define means that it has its own setter/getter.
@@ -83,13 +76,13 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 */
 		maxDateBound: function() {
 			if(this.desktop) {
-				//updated UI here.
+				this._dirtyLevel = 1;
 			}
 		},
 		
 		minDateBound: function() {
 			if(this.desktop) {
-				//updated UI here.
+				this._dirtyLevel = 1;
 			}
 		},
 		
@@ -106,12 +99,16 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		},
 		
 		pivot: function() {
-			console.log('test', this.pivot, this._pivot);
 			if(this.desktop) {
 				//updated UI here.
 			}
 		},
 		
+		period: function() {
+			if(this.desktop) {
+				this._dirtyLevel = 4;
+			}
+		}
 		
 	},
 	/**
@@ -137,49 +134,27 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	/*
 	 * self method
 	 */
-	recalculate: function() {
+	calculate: function() {
+		var level = this._dirtyLevel;
 		
-		
-		this.calculateInsideWidth();
-		this.buildFacet();
-	},
-	_getFacetMainLevel: function() {
-		// from year to second
-		var unit = this._unit,
-			period = this._period,
-			i = 0,
-			length = unit.length - 1;
-		
-		for(; i < length; i++)
-			if(period / (unit[i]*2) >= 1)
-				return i;
-		return this._millisecond;
-	},
-	_getNextFacet: function(startTime, unit, includeSelf) {
-		var mod = startTime % unit, 
-			unitTime = Math.floor(startTime / unit) * unit;
-
-		console.log(mod, startTime, unit);
-		
-		if(includeSelf && mod == 0)
-			return unitTime;
-		return unitTime + unit;
-	},
-	_getPxDistance: function(t1, t2, pxPerMs) {
-		if(t1 instanceof Date) t1 = t1.getTime();
-		if(t2 instanceof Date) t2 = t2.getTime();
-		return Math.abs(t1 - t2) * pxPerMs;
-	},
-	_getFormat: function(unitLevel) {
-		switch(unitLevel) {
-			case this._year: return this._yearFormat;
-			case this._month: return this._monthFormat; break;
-			case this._day: return this._dayFormat; break;
-			case this._hour: return this.hourFormat; break;
-			case this._minute: return this.minuteFormat; break;
-			case this._second: return this.secondFormat; break;
-			case this._millisecond: return this.millisecondFormat; break;
+		switch(level) {
+			case 4: 
+				this.cleanFacet();
+				this.buildFacet();
+				this.calculateInsideWidth();
+			case 3:
+//				this.cleanEvent();
+				this.renderEvent();
+			case 2:
+				//this.
+			case 1:
+				break;
 		}
+		
+		this._dirtyLevel = 0;
+	},
+	cleanFacet: function() {
+		jq('.' + this.$s('facet')).remove();
 	},
 	buildFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
@@ -189,6 +164,20 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		if(largeUnitLevel >= this._year)
 			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
 	},
+	calculateInsideWidth: function() {
+		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
+			periodRatio = period / this._period,
+			width = jq(this).width(),
+			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
+		jq(this.$n('content-inside')).width(innerWidth);
+	},
+	renderEvent: function() {
+		//var 
+	},
+	_refreshProperties: function() {
+		
+	},
+	
 	_buildFacet: function(unitLevel, cave) {
 		var unit = this._unit[unitLevel],
 			pxPerMs = jq(this).width() / this._period,
@@ -205,29 +194,86 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			mRightBound = rightBound + (period * (multiply - 1)),
 			realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound,
 			realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound,
-			facet = this._getNextFacet(realLeftBound, unit, true),
+			facet = this._getNextFacet(realLeftBound, unitLevel, true),
 			
 			format = this._getFormat(unitLevel),
 			calendar = new zk.fmt.Calendar();
 				
-		for (; facet < realRightBound ; facet = this._getNextFacet(facet, unit)) {
+		for (; facet < realRightBound ; facet = this._getNextFacet(facet, unitLevel)) {
 			var left = this._getPxDistance(realLeftBound, facet, pxPerMs);
-			console.log(new Date(facet), left);
 
+			console.log(format, unitLevel);
 			jq('<div></div>').html(calendar.formatDate(new Date(facet), format))
 				.css('left',left).addClass(this.$s('facet'))
 				.appendTo(cave);
 		}
 	},
-	calculateInsideWidth: function() {
-		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
-			periodRatio = period / this._period,
-			width = jq(this).width(),
-			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
-		jq(this.$n('content-inside')).width(innerWidth);
+	_getFacetMainLevel: function() {
+		// from year to second
+		var unit = this._unit,
+			period = this._period,
+			i = 0,
+			length = unit.length - 1;
+		
+		for(; i < length; i++)
+			if(period / (unit[i]*2) >= 1)
+				return i;
+		return this._millisecond;
 	},
+	_getNextFacet: function(startTime, unit, includeSelf) {
+		var facetTime = new Date(startTime),
+			facetTimeArr = [];
+		
+		switch(unit + 1) {
+			case 1:
+				facetTime.setMonth(1);
+			case 2:
+				facetTime.setDate(1);
+			case 3: 
+				facetTime.setHours(0);
+			case 4: 
+				facetTime.setMinutes(0);
+			case 5: 
+				facetTime.setSeconds(0);
+			case 6: 
+				facetTime.setMilliseconds(0);
+		}
+		
+		if(includeSelf && facetTime.getTime() == startTime)
+			return startTime;
 	
+		facetTimeArr = [facetTime.getFullYear(), facetTime.getMonth(), facetTime.getDate(),
+			facetTime.getHours(), facetTime.getMinutes(), facetTime.getSeconds(), facetTime.getMilliseconds()];
 	
+		facetTimeArr[unit] = facetTimeArr[unit] + 1;
+	
+		return new Date(facetTimeArr[0], facetTimeArr[1], facetTimeArr[2], facetTimeArr[3], facetTimeArr[4], facetTimeArr[5], facetTimeArr[6]).getTime();
+		
+//		var mod = startTime % unit, 
+//			unitTime = Math.floor(startTime / unit) * unit;
+//
+//		console.log(mod, startTime, unit);
+//		
+//		if(includeSelf && mod == 0)
+//			return unitTime;
+//		return unitTime + unit;
+	},
+	_getPxDistance: function(t1, t2, pxPerMs) {
+		if(t1 instanceof Date) t1 = t1.getTime();
+		if(t2 instanceof Date) t2 = t2.getTime();
+		return Math.abs(t1 - t2) * pxPerMs;
+	},
+	_getFormat: function(unitLevel) {
+		switch(unitLevel) {
+			case this._year: return this._yearFormat;
+			case this._month: return this._monthFormat;
+			case this._day: return this._dayFormat;
+			case this._hour: return this._hourFormat;
+			case this._minute: return this._minuteFormat;
+			case this._second: return this._secondFormat;
+			case this._millisecond: return this._millisecondFormat;
+		}
+	},
 	
 	bind_: function () {
 		/**
@@ -236,6 +282,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 * DONT'T forget to call supers in bind_ , or you will get error.
 		 */
 		this.$supers(timeline.Timeline,'bind_', arguments);
+		zWatch.listen({
+			onSize: this, 
+			onResponse: this
+		});
 		//A example for domListen_ , REMEMBER to do domUnlisten in unbind_.
 		//this.domListen_(this.$n("cave"), "onClick", "_doItemsClick");
 	},
@@ -256,15 +306,26 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		* For widget lifecycle , the super unbind_ should be called
 		* as LAST STATEMENT in the function.
 		*/
+		zWatch.unlisten({
+			onSize: this, 
+			onResponse: this
+		});
 		this.$supers(timeline.Timeline,'unbind_', arguments);
 	},
 	/*
 		widget event, more detail 
 		please refer to http://books.zkoss.org/wiki/ZK%20Client-side%20Reference/Notifications
 	 */
-	onSize: function(evt) {
-		this.$supers('onSize', arguments);
-		this.recalculate();
+	onResponse: function () {
+		console.log('in response...');
+		if(this._dirtyLevel) {
+			this.calculate();
+		}
+	},
+	onSize: function() {
+//		this.$supers('onSize', arguments);
+		console.log('in onSize...');
+		this.calculate();
 	},
 	doClick_: function (evt) {
 		this.$super('doClick_', evt, true);//the super doClick_ should be called
