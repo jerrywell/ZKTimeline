@@ -18,15 +18,7 @@ function (out) {
 	
 		out.push('<div class="', zcls, '-content" id="', uuid, '-content" ' + '>');
 			out.push('<div class="', zcls, '-content-inside" id="', uuid, '-content-inside">');
-				out.push('<div class="', zcls, '-content-cave" id="', uuid, '-content-cave">');
-				
-				for (var w = this.timelineEvents; w; w = w.nextSibling){
-					out.push('<div class="', zcls, '-outer">');
-					w.redraw(out);
-					out.push('</div>');
-				}
-				
-				out.push('</div>');
+				out.push('<div class="', zcls, '-content-cave" id="', uuid, '-content-cave"></div>');	
 				out.push('<div class="', zcls, '-small-facet" id="', uuid, '-small-facet"></div>');
 				out.push('<div class="', zcls, '-main-facet" id="', uuid, '-main-facet"></div>');
 				out.push('<div class="', zcls, '-large-facet" id="', uuid, '-large-facet"></div>');

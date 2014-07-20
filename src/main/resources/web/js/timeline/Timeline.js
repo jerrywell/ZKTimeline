@@ -19,15 +19,36 @@
  * If this.desktop exist , means it's after mold rendering.
  *
  */
+function TimelineEvents() {
+	var events = [];
+	
+	return {
+		add: function(event) {
+			
+		},
+		remove: function(event) {
+			
+		},
+		replace: function(event) {
+			
+		}
+	};
+}
+
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineEvents: [],
 	_pivot: null,
 	_period: (604800000/7) * 7,
-	_minDateBound: new Date('2010/1/1'),
-	_maxDateBound: new Date('2020/12/31'),
+	_minDateBound: new Date('2010/1/1').getTime(),
+	_maxDateBound: new Date('2020/12/31').getTime(),
 	
 	_multiply: 2,
 	_dirtyLevel: 4,
+	_realLeftBound: -1,
+	_realRightBound: -1,
+	_eventsIndexBegin: -1,
+	_eventsIndexEnd: -1,
+	_pxPerMs: -1,
 	
 	_yearFormat: "yyyy",
 	_monthFormat: "MM",
@@ -137,14 +158,20 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	calculate: function() {
 		var level = this._dirtyLevel;
 		
+		if(!this._dirtyLevel)
+			return;
+		
+		this._refreshProperties();
+		
 		switch(level) {
 			case 4: 
 				this.cleanFacet();
 				this.buildFacet();
 				this.calculateInsideWidth();
 			case 3:
-//				this.cleanEvent();
-				this.renderEvent();
+				this.cleanEvent();
+				this.renderEvent(null, this.$n('content-cave'));
+				
 			case 2:
 				//this.
 			case 1:
@@ -156,6 +183,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	cleanFacet: function() {
 		jq('.' + this.$s('facet')).remove();
 	},
+	cleanEvent: function() {
+		jq('.' + this.$s('event')).remove();
+	},
 	buildFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
 			largeUnitLevel = mainUnitLevel - 1;
@@ -165,25 +195,54 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
 	},
 	calculateInsideWidth: function() {
-		var period = this._maxDateBound.getTime() - this._minDateBound.getTime(),
+		var period = this._maxDateBound - this._minDateBound,
 			periodRatio = period / this._period,
 			width = jq(this).width(),
 			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
 		jq(this.$n('content-inside')).width(innerWidth);
 	},
-	renderEvent: function() {
-		//var 
+	renderEvent: function(out, cave) {
+		var indexBegin,
+			indexEnd,
+			lastIndexBegin = this._eventsIndexBegin,
+			lastIndexEnd = this._eventsIndexEnd,
+			realLeftBound = this._realLeftBound,
+			realRightBound = this._realRightBound,
+			events = this._timelineEvents;
+		
+		out = out || [];
+		
+		// find indexBegin and indexEnd to render in boundary
+		for(var i=0, length=events.length; i < length; i++) {
+			var event = events[i],
+				startDate = event.startDate;
+			if(startDate >= realLeftBound) {
+				indexBegin = i;
+				for(; i < length && startDate < realRightBound; i++) {
+					var event = events[i];
+						startDate = event.startDate;
+					this._eventOut(out, event);
+				}
+				indexEnd = i - 1;
+			}
+				
+		}
+		
+		if(cave)
+			jq(cave).append(out.join(''));
+		
+		return out;
+	},
+	_eventOut: function(out, event) {
+		console.log(this._pxPerMs, new Date(event.startDate), new Date(this._minDateBound));
+		var left = this._getPxDistance(this._minDateBound, event.startDate, this._pxPerMs);
+		out.push('<div id="' + this.uuid + event.objectId 
+				+ '" class="' + this.$s('event') + '" style="left:');
+		out.push(left + 'px;">' + event.title + '</div>')
 	},
 	_refreshProperties: function() {
-		
-	},
-	
-	_buildFacet: function(unitLevel, cave) {
-		var unit = this._unit[unitLevel],
-			pxPerMs = jq(this).width() / this._period,
-			pxPerUnit = pxPerMs * unit,
-			minDateBound = this._minDateBound.getTime(),
-			maxDateBound = this._maxDateBound.getTime(),
+		var minDateBound = this._minDateBound,
+			maxDateBound = this._maxDateBound,
 			halfPeriod = this._period / 2,
 			pivot = this._pivot.getTime(),
 			leftBound = pivot - halfPeriod,
@@ -191,22 +250,46 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			multiply = this._multiply,
 			period = this._period,
 			mLeftBound = leftBound - (period * (multiply - 1)),
-			mRightBound = rightBound + (period * (multiply - 1)),
-			realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound,
-			realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound,
+			mRightBound = rightBound + (period * (multiply - 1));
+		
+		this._realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound;
+		this._realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound;
+		this._pxPerMs = jq(this).width() / this._period;
+	},
+	
+	_buildFacet: function(unitLevel, cave) {
+		var unit = this._unit[unitLevel],
+			pxPerMs = this._pxPerMs,
+			pxPerUnit = pxPerMs * unit,
+			realLeftBound = this._realLeftBound,
+			realRightBound = this._realRightBound,
+			minDateBound = this._minDateBound,
+
 			facet = this._getNextFacet(realLeftBound, unitLevel, true),
 			
 			format = this._getFormat(unitLevel),
-			calendar = new zk.fmt.Calendar();
+			calendar = new zk.fmt.Calendar(),
+			out = [];
 				
+//		for (; facet < realRightBound ; facet = this._getNextFacet(facet, unitLevel)) {
+//			var left = this._getPxDistance(realLeftBound, facet, pxPerMs);
+//
+//			jq('<div></div>').html(calendar.formatDate(new Date(facet), format))
+//				.css('left',left).addClass(this.$s('facet'))
+//				.appendTo(cave);
+//		}
+		
 		for (; facet < realRightBound ; facet = this._getNextFacet(facet, unitLevel)) {
-			var left = this._getPxDistance(realLeftBound, facet, pxPerMs);
-
-			console.log(format, unitLevel);
-			jq('<div></div>').html(calendar.formatDate(new Date(facet), format))
-				.css('left',left).addClass(this.$s('facet'))
-				.appendTo(cave);
+			var left = this._getPxDistance(minDateBound, facet, pxPerMs);
+			out.push('<div class="' + this.$s('facet') + '" style="left:' 
+					+ left + 'px">' + calendar.formatDate(new Date(facet), format));
+			console.log(calendar.formatDate(new Date(facet), format));
+			out.push('</div>');
 		}
+		
+		
+		if(out.length > 0)
+			jq(cave).append(out.join(''));
 	},
 	_getFacetMainLevel: function() {
 		// from year to second

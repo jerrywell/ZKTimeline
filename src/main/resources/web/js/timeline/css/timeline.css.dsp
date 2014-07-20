@@ -54,7 +54,7 @@
 	height: 10px;
 }
 
-/*
+
 .z-timeline .z-timeline-event{
 	height: 150px;
 	width: 150px;
@@ -66,7 +66,7 @@
 	border-left-color: #999999;
 }
 
-
+/*
 .z-timeline .z-timeline-text:hover{
 	/*border-color: #B6B6B6;*/
 	/*background-color: white;*/

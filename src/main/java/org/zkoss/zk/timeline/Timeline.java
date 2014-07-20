@@ -3,7 +3,6 @@ package org.zkoss.zk.timeline;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +15,11 @@ import org.zkoss.zul.impl.XulElement;
 
 public class Timeline extends XulElement {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
 	static {
 		//addClientEvent(Timeline.class, "onFoo", 0);
 	}
@@ -23,15 +27,13 @@ public class Timeline extends XulElement {
 	/*
 	 * about timeline navigation
 	 */
-	private Date _maxDateBound;
-	private Date _minDateBound;
+	private long _maxDateBound;
+	private long _minDateBound;
 	// pivot is always in the middle of navigation
 	private Date _pivot;
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
 	private long _period = 604800000L;
 	private List<TimelineEvent> _timelineEvents;
-	private List<String> _facets;
-	private TimeUnit unit = TimeUnit.DAY;
 	
 	private String _yearFormat = "yyyy";
 	private String _monthFormat = "MM";
@@ -44,8 +46,8 @@ public class Timeline extends XulElement {
 	public Timeline(){
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
 		try {
-			_minDateBound = dateFormat.parse("2010/1/1");
-			_maxDateBound = dateFormat.parse("2020/12/31");
+			_minDateBound = dateFormat.parse("2010/1/1").getTime();
+			_maxDateBound = dateFormat.parse("2020/12/31").getTime();
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -69,22 +71,22 @@ public class Timeline extends XulElement {
 		return _timelineEvents;
 	}
 	
-	public Date getMaxDateBound() {
+	public long getMaxDateBound() {
 		return _maxDateBound;
 	}
 
-	public void setMaxDateBound(Date maxDateBound) {
+	public void setMaxDateBound(long maxDateBound) {
 		if(!Objects.equals(_maxDateBound, maxDateBound)){	
 			this._maxDateBound = maxDateBound;
 			smartUpdate("maxDateBound", _maxDateBound);
 		}
 	}
 
-	public Date getMinDateBound() {
+	public long getMinDateBound() {
 		return _minDateBound;
 	}
 
-	public void setMinDateBound(Date minDateBound) {
+	public void setMinDateBound(long minDateBound) {
 		if(!Objects.equals(_minDateBound, minDateBound)){	
 			this._minDateBound = minDateBound;
 			smartUpdate("minDateBound", _minDateBound);
