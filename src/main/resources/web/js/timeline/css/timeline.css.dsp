@@ -13,7 +13,7 @@
 }
 
 .z-timeline .z-timeline-content-inside{
-
+	cursor: move;
 }
 
 .z-timeline .z-timeline-content-cave{
@@ -65,7 +65,7 @@
 	-moz-border-radius: 5px;
 	border-radius: 5px;
 	font-family: "Helvetica Neue",Helvetica,Arial,sans-serif !important;
-	
+	cursor: pointer;
 	font-weight: bold;
 	font-size: 11px;
 	line-height: 11px;
@@ -76,8 +76,9 @@
 }
 
 .z-timeline .z-timeline-event:hover{
-	border-left-color: #999999;
-	
+	border-color: #999999;
+	background-color: white;
+	color: black;
 }
 
 /*
