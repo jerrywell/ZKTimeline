@@ -20,6 +20,110 @@
  *
  */
 
+function TimelineSlide(wgt, $dragPane, $target) {
+	if(!$target) $target = $dragPane;
+	var dragging = false,
+		PageX = 0,
+		targetX = 0, 
+		minDistance = 40,
+		friction = 1,
+		target = $target.get(0),
+		$content = jq(wgt.$n('content')),
+		$insideContent = jq(wgt.$n('content-inside')),
+		beginEvent,
+		startTracking = function(event) {
+			var pageX1 = event.pageX,
+				scrollLeft = target.scrollLeft + pageX - pageX1;
+			
+			pageX = pageX1;
+			
+			if(scrollLeft < 0 || scrollLeft + $content.width() > $insideContent.width())
+				return;
+			target.scrollLeft = scrollLeft;
+		},
+		stopTracking = function(event) {
+			$dragPane.unbind('mousemove');
+			dragging = false;
+			doMomentum(beginEvent, event);
+			beginEvent = null;
+		},
+		doMomentum = function(event1, event2) {
+			if(!(event1 && event2)) return;
+
+			var x1 = event1.pageX,
+				t1 = event1.timeStamp,
+				x2 = event2.pageX,
+				t2 = event2.timeStamp,
+
+				// Deltas
+				dX = x2 - x1,
+				dMs = Math.max(t2 - t1, 1),
+
+				// Speeds
+				speedX = -Math.max(Math.min(dX/dMs, 1), -1),
+
+				// Distance moved (Euclidean distance)
+				distance = Math.pow(x1-x2, 2);
+
+			if (distance > minDistance) {
+				// Momentum
+				var lastStepTime = new Date(),
+					limitStep = 100,
+					currentStep = limitStep,
+					interval = setInterval(function(){
+						if(currentStep -- == 0) {
+							clearInterval(interval);
+							return;
+						}
+
+						speedX *= (currentStep / 100);
+
+						var now = new Date(),
+							stepDuration = now.getTime() - lastStepTime.getTime(),
+							newLeft = (target.scrollLeft + (speedX * stepDuration / friction));
+
+						//console.log(newLeft, target.scrollLeft, speedX, currentStep);
+
+						lastStepTime = now;
+						if(newLeft < 0) 
+							newLeft = 0;
+						else if(newLeft + $content.width() > $insideContent.width()) {
+							newLeft = $insideContent.width() - $content.width();
+						}
+						
+
+						target.scrollLeft = newLeft;
+					}, Math.abs(speedX) * 2000 / 100);
+			}
+
+		};
+
+	return {
+		init: function() {
+			$dragPane.bind('mousedown', function(event) {
+				if(!dragging) {
+					beginEvent = event;
+					dragging = true;
+					pageX = event.pageX;
+					targetX = $target.offset().left;
+					a = event;
+					$dragPane.bind('mousemove', startTracking);
+				}
+				event.preventDefault();
+				
+			}).bind('mouseup', stopTracking).bind('mouseleave', function(event) {
+				if(dragging)
+					stopTracking(event);
+			});
+			return this;
+		},
+		destroy: function() {
+			$dragPane.unbind('mousedown mouseup');
+			return this;
+		}
+	};
+}
+
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineEvents: [],
 	_pivot: null,
@@ -35,6 +139,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_eventsIndexEnd: -1,
 	_pxPerMs: -1,
 	_timelineEventQueue:[],
+	_slider: null,
 	
 	_yearFormat: "yyyy",
 	_monthFormat: "MM",
@@ -362,6 +467,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			onSize: this, 
 			onResponse: this
 		});
+		this._slider = new TimelineSlide(this, jq(this.$n()), jq(this.$n('content'))).init(); 
 		//A example for domListen_ , REMEMBER to do domUnlisten in unbind_.
 		//this.domListen_(this.$n("cave"), "onClick", "_doItemsClick");
 	},
@@ -382,6 +488,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		* For widget lifecycle , the super unbind_ should be called
 		* as LAST STATEMENT in the function.
 		*/
+		this._slider.destroy();
 		zWatch.unlisten({
 			onSize: this, 
 			onResponse: this
