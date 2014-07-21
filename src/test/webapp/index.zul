@@ -1,16 +1,21 @@
 <zk>
 	<zscript><![CDATA[
 	    import org.zkoss.zk.timeline.*;
+	    java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
         List eee = new ArrayList();
         TimelineEvent e1 = new TimelineEvent();
         e1.setTitle("e1");
-        e1.setStartDate(new Date());
+        e1.setStartDate(formater.parse("2015/9/22 11:11:11"));
         e1.setStopDate(new Date());
         TimelineEvent e2 = new TimelineEvent();
         e2.setTitle("e2");
-        e2.setStartDate(new Date());
+        e2.setStartDate(formater.parse("2014/10/23 11:11:11"));
+        TimelineEvent e3 = new TimelineEvent();
+        e3.setTitle("e3");
+        e3.setStartDate(formater.parse("2015/11/21 11:11:11"));
         eee.add(e1);
         eee.add(e2);
+        eee.add(e3);
         Date d = new Date();
     ]]></zscript>
  	<window id="win" title="Hello World!!" border="normal">
@@ -23,10 +28,23 @@
 			public void minus(){
 				myComp.setPeriod(myComp.getPeriod() - Math.round(myComp.getPeriod() * 0.1));
 			}
+			
+			public void addEvent() {
+				TimelineEvent event = new TimelineEvent();
+				event.setTitle(title.getText());
+				event.setStartDate(startDate.getValue());
+				event.setStopDate(stopDate.getValue());
+				myComp.addTimelineEvent(event);
+			}
 	
 		]]></zscript>
 		<button label="plus" onClick="plus()"></button>
 		<button label="minus" onClick="minus()"></button>
+		<separator/>
+		title: <textbox id="title"/>
+		startDate: <datebox id="startDate"/>
+		stopDate: <datebox id="stopDate"/>
+		<button label="add event" onClick="addEvent()"/>
 	</window>
 	<button label="change vision" onClick="changeVision()"></button>
 	<datebox value="${d }"></datebox>

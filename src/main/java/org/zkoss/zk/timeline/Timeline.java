@@ -19,7 +19,6 @@ public class Timeline extends XulElement {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-
 	static {
 		//addClientEvent(Timeline.class, "onFoo", 0);
 	}
@@ -32,8 +31,13 @@ public class Timeline extends XulElement {
 	// pivot is always in the middle of navigation
 	private Date _pivot;
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
-	private long _period = 604800000L;
+	private long _period = 604800000L/7 * 365;
 	private List<TimelineEvent> _timelineEvents;
+	
+	/*
+	 * about timeline event
+	 */
+	private int _eventObjectId = 0;
 	
 	private String _yearFormat = "yyyy";
 	private String _monthFormat = "MM";
@@ -46,8 +50,8 @@ public class Timeline extends XulElement {
 	public Timeline(){
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
 		try {
-			_minDateBound = dateFormat.parse("2010/1/1").getTime();
-			_maxDateBound = dateFormat.parse("2020/12/31").getTime();
+			_minDateBound = dateFormat.parse("2014/1/1").getTime();
+			_maxDateBound = dateFormat.parse("2014/12/31").getTime();
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
@@ -62,6 +66,8 @@ public class Timeline extends XulElement {
 	
 	public void setTimelineEvents(List<TimelineEvent> timelineEvents) {
 		if(!Objects.equals(_timelineEvents, timelineEvents)){	
+			for (TimelineEvent timelineEvent : timelineEvents)
+				timelineEvent.setObjectId(++_eventObjectId);
 			this._timelineEvents = timelineEvents;
 			smartUpdate("timelineEvents", _timelineEvents);
 		}
@@ -195,6 +201,7 @@ public class Timeline extends XulElement {
 	 */
 	
 	public void addTimelineEvent(TimelineEvent event) {
+		event.setObjectId(++_eventObjectId);
 		_timelineEvents.add(event);
 		smartUpdate("timelineEvent", event);
 	}
@@ -253,5 +260,28 @@ public class Timeline extends XulElement {
 	public enum TimeUnit{
 		YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND
 	}
+	
+	class DefaultRenderer implements Renderer<TimelineEvent>{
+
+		public long getStartDate(TimelineEvent t) {
+			return t.getStartDate().getTime();
+		}
+
+		public long getStopDate(TimelineEvent t) {
+			return t.getStopDate().getTime();
+		}
+
+		public int getObjectId(TimelineEvent t) {
+			return t.getObjectId();
+		}
+
+		public String getHTMLHead(TimelineEvent t) {
+			return "<div ";
+		}
+		
+		public String getHTMLTail(TimelineEvent t) {
+			return ">" + t.getTitle() + "</div>";
+		}
+	};
 }
 

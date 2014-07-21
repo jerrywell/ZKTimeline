@@ -56,23 +56,34 @@
 
 
 .z-timeline .z-timeline-event{
-	height: 150px;
-	width: 150px;
-	border-left: 1px #E5E5E5 solid;
+	height: 40px;
+	width: 140px;
+	background-color: #EFEFEF;
+	border: 1px #E7E7E7 solid;
 	position: absolute;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+	font-family: "Helvetica Neue",Helvetica,Arial,sans-serif !important;
+	
+	font-weight: bold;
+	font-size: 11px;
+	line-height: 11px;
+	color: #999;
+	margin-bottom: 2px;
+	
+	padding: 5px;
 }
 
 .z-timeline .z-timeline-event:hover{
 	border-left-color: #999999;
+	
 }
 
 /*
-.z-timeline .z-timeline-text:hover{
-	/*border-color: #B6B6B6;*/
-	/*background-color: white;*/
-	background-image: url(timeline.png?v4.4);
-	background-repeat: no-repeat;
-	background-position: 0 -53px;
+.z-timeline .z-timeline-event:hover{
+	border-color: #B6B6B6;
+	background-color: white;
 	color: #0088CC;
 }
 
