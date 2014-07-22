@@ -43,7 +43,7 @@ public class Timeline extends XulElement {
 	private String _monthFormat = "MM";
 	private String _dayFormat = "dd";
 	private String _hourFormat = "hh";
-	private String _minuteFormat = "mm";
+	private String _minuteFormat = "hh:mm";
 	private String _secondFormat = "ss";
 	private String _millisecondFormat = "SS";
 	

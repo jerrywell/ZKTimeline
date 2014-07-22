@@ -79,6 +79,7 @@
 	border-color: #999999;
 	background-color: white;
 	color: black;
+	z-index: 100;
 }
 
 /*
