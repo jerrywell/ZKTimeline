@@ -104,7 +104,7 @@ function TimelineSlide(wgt, $dragPane, $target) {
 		init: function() {
 			$dragPane.bind('mousedown', function(event) {
 				if(!dragging) {
-					beginEvent = event;
+					beginItem = event;
 					dragging = true;
 					pageX = event.pageX;
 					targetX = $target.offset().left;
@@ -127,7 +127,7 @@ function TimelineSlide(wgt, $dragPane, $target) {
 }
 
 timeline.Timeline = zk.$extends(zul.Widget, {
-	_timelineEvents: [],
+	_timelineItems: [],
 	_pivot: null,
 	_period: (604800000/7) * 365,
 	_minDateBound: new Date('2014/1/1').getTime(),
@@ -140,17 +140,19 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_secondFormat: "ss",
 	_millisecondFormat: "SS",
 	
-	_multiply: 2,
+	_multiply:5,
 	_dirtyLevel: 4,
 	_realLeftBound: -1,
 	_realRightBound: -1,
-	_eventsIndexBegin: -1,
-	_eventsIndexEnd: -1,
+	_itemsIndexBegin: -1,
+	_itemsIndexEnd: -1,
 	_pxPerMs: -1,
-	_timelineEventQueue:[],
+	_addedItemQueue:[],
+	_removedItemQueue: [],
 	_slider: null,
 	_processedLeftBound: Number.MAX_VALUE,
 	_processedRightBound: Number.MIN_VALUE,
+	_updateFlag: {},
 	
 	_year: 0,
 	_month: 1,
@@ -191,31 +193,44 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 */
 		maxDateBound: function() {
 			if(this.desktop) {
-				this._dirtyLevel = 1;
+				jq.extend(this._updateFlag, {
+					"10": true,
+					"9": true
+				});
 			}
 		},
 		
 		minDateBound: function() {
 			if(this.desktop) {
-				this._dirtyLevel = 1;
+				jq.extend(this._updateFlag, {
+					"10": true,
+					"9": true
+				});
 			}
 		},
 		
-		timelineEvents: function() {
-			if(this.desktop) {
-				//updated UI here.
-			}
-		},
+		timelineItems: null,
 		
 		pivot: function() {
 			if(this.desktop) {
-				//updated UI here.
+				jq.extend(this._updateFlag, {
+					"10": true,
+					"7": true,
+					"9": true
+				});
 			}
 		},
 		
 		period: function() {
 			if(this.desktop) {
-				this._dirtyLevel = 4;
+				jq.extend(this._updateFlag, {
+					"10": true,
+					"5": true,
+					"1": true,
+					"3": true,
+					"7": true,
+					"9": true
+				});
 			}
 		}
 		
@@ -226,9 +241,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 *
 	 * Like the example below, they are the same as we mentioned in $define section.
 	 */
-	setTimelineEvent: function(val) {
-		this._timelineEventQueue.push(val);
-		this._dirtyLevel = 2;
+	setAddedItem: function(val) {
+		this._addedItemQueue.push(val);
+		jq.extend(this._updateFlag, {
+			"6": true
+		});
+	},
+	setRemovedItem: function(val) {
+		console.log(val);
+		this._removedItemQueue.push(val);
+		jq.extend(this._updateFlag, {
+			"6": true
+		});
 	},
 	/*
 	getText:function(){ return this._text; },
@@ -244,37 +268,39 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 * self method
 	 */
 	calculate: function() {
-		var level = this._dirtyLevel;
+		var updateFlag = {};
+		jq.extend(updateFlag, this._updateFlag);
+		this._updateFlag = {};
 		
-		if(!this._dirtyLevel)
-			return;
-		
-		this._refreshProperties();
-		
-		switch(level) {
-			case 4: 
-				this._processedLeftBound = Number.MAX_VALUE;
-				this._processedRightBound = Number.MIN_VALUE;
-				this.cleanFacet();
-				this.buildFacet();
-				this.calculateInsideWidth();
-			case 3:
-				this.cleanEvent();
-				this.renderEvent(null, this.$n('content-cave'));
-			case 2:
-				this.handleEventsUpdate();
-			case 1:
-				//this.gotoTime(this._pivot);
-				break;
+		if(updateFlag['6']) {
+			this.handleItemsUpdate();
 		}
-		
-		this._dirtyLevel = 0;
+		if(updateFlag['10']) 
+			this._refreshProperties();
+		if(updateFlag['5'] && updateFlag['1'] && updateFlag['3']) {
+			this.calculateInsideWidth();
+			this._processedLeftBound = this._realRightBound;
+			this._processedRightBound = this._realLeftBound;
+			this.cleanFacet();
+			this.buildFacet();
+			this.cleanItem();
+			this.renderItem(null, this.$n('content-cave'));
+		}
+		if(updateFlag['7']) {
+			var self = this,
+				cb;
+			if(updateFlag['9'])
+				cb = function() {
+					self.refreshItemAndFacet.apply(self);
+				}
+			this.gotoTime(this._pivot, cb);
+		}
 	},
 	cleanFacet: function() {
 		jq('.' + this.$s('facet')).remove();
 	},
-	cleanEvent: function() {
-		jq('.' + this.$s('event')).remove();
+	cleanItem: function() {
+		jq('.' + this.$s('item')).remove();
 	},
 	buildFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
@@ -298,19 +324,19 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
 		jq(this.$n('content-inside')).width(innerWidth);
 	},
-	renderEvent: function(out, cave) {
+	renderItem: function(out, cave) {
 		var indexBegin,
 			indexEnd,
-			lastIndexBegin = this._eventsIndexBegin,
-			lastIndexEnd = this._eventsIndexEnd,
+			lastIndexBegin = this._itemsIndexBegin,
+			lastIndexEnd = this._itemsIndexEnd,
 			realLeftBound = this._realLeftBound,
 			realRightBound = this._realRightBound,
-			events = this._timelineEvents;
+			items = this._timelineItems;
 		
 		out = out || [];
 		
 		// find indexBegin and indexEnd to render in boundary
-		events.sort(function(e1, e2) {
+		items.sort(function(e1, e2) {
 			var startDate1 = e1.startDate,
 				startDate2 = e2.startDate;
 			
@@ -319,15 +345,15 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			else
 				return startDate1 - startDate2;
 		});
-		for(var i=0, length=events.length; i < length; i++) {
-			var event = events[i],
-				startDate = event.startDate;
+		for(var i=0, length=items.length; i < length; i++) {
+			var item = items[i],
+				startDate = item.startDate;
 			if(startDate >= realLeftBound) {
 				indexBegin = i;
 				for(; i < length && startDate < realRightBound; i++) {
-					var event = events[i];
-						startDate = event.startDate;
-					this._eventOut(out, event);
+					var item = items[i];
+						startDate = item.startDate;
+					this._itemOut(out, item);
 				}
 				indexEnd = i - 1;
 			}
@@ -339,14 +365,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		return out;
 	},
-	refreshEventAndFacet: function() {
+	refreshItemAndFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
 			largeUnitLevel = mainUnitLevel - 1,
 			processedLeftBound = this._processedLeftBound,
-			processedRightBound = this._processedRightBound;
+			processedRightBound = this._processedRightBound;	
 		
-		// render event
-		this.renderEvent(null, this.$n('content-cave'));
+		// render item
+		this.renderItem(null, this.$n('content-cave'));
 		
 		// build facet
 		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
@@ -356,33 +382,52 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		// located processed area
 		if(this._realLeftBound < this._processedLeftBound)
 			this._processedLeftBound = this._realLeftBound;
-		else if(this._realRightBound > this._processedRightBound)
+		if(this._realRightBound > this._processedRightBound)
 			this._processedRightBound = this._realRightBound;
 	},
-	handleEventsUpdate: function() {
-		var queue = this._timelineEventQueue,
-			events = this._timelineEvents,
-			realLeftBound = this._realLeftBound,
-			realRightBound = this._realRightBound,
+	handleItemsUpdate: function() {
+		var addedQueue = this._addedItemQueue,
+			removedQueue = this._removedItemQueue,
+			items = this._timelineItems,
+			processedLeftBound = this._processedLeftBound,
+			processedRightBound = this._processedRightBound,
 			i = 0,
-			length = queue.length,
-			event,
-			out = [];
+			length = addedQueue.length,
+			item,
+			out = [],
+			cacheMap = {};
 		
 		for(;i < length; i++) {
-			event = queue[i];
-			if(event.startDate >= realLeftBound && event.stopDate <= realRightBound)
-				this._eventOut(out, event);
-			events.push(event);
+			item = addedQueue[i];
+			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound)
+				this._itemOut(out, item);
+			items.push(item);
+		}
+		
+		for(i = 0, length = removedQueue.length; i < length; i++) {
+			item = removedQueue[i];
+			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound) {
+				console.log('#' + this.uuid + '-item-' + item.objectId);
+				jq('#' + this.uuid + '-item-' + item.objectId).remove();
+			}
+			cacheMap[item.objectId] = true;
+		}
+		
+		for(i = items.length - 1; i--;) {
+			item = items[i];
+			console.log(item, i);
+			if(cacheMap[item.objectId])
+				items.splice(i, 1);
 		}
 		
 		if(out.length > 0)
 			jq(this.$n('content-cave')).append(out.join(''));
 		
-		this._timelineEventQueue = [];
+		this._addedItemQueue = [];
+		this._removedItemQueue = [];
 	},
 	
-	gotoTime: function(time) {
+	gotoTime: function(time, cb) {
 		var scrollLeft = this._getPxDistance(time - (this._period / 2), this._minDateBound, this._pxPerMs),
 			width = jq(this.$n('content')).width(),
 			insideWidth = jq(this.$n('content-inside')).width(),
@@ -392,30 +437,27 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		if(scrollLeft > safeLeftBound)
 			scrollLeft = safeLeftBound; 
 		
-		this._dirtyLevel = 1;
+//		this._dirtyLevel = 1;
 		
 		jq(this.$n('content')).animate({
 			scrollLeft: scrollLeft
 		},{
 			duration: zk(this).getAnimationSpeed(500),
-			complete: function() {
-				self.refreshEventAndFacet.apply(self);
-			}
+			complete: cb
 		});
 	},
-	_eventOut: function(out, event) {
-		var left = this._getPxDistance(this._minDateBound, event.startDate, this._pxPerMs);
-		out.push('<div id="' + this.uuid + '-event-' + event.objectId 
-				+ '" class="' + this.$s('event') + '" style="left:');
-		out.push(left + 'px">' + event.title + '</div>')
+	_itemOut: function(out, item) {
+		var left = this._getPxDistance(this._minDateBound, item.startDate, this._pxPerMs);
+		out.push('<div id="' + this.uuid + '-item-' + item.objectId 
+				+ '" class="' + this.$s('item') + '" style="left:');
+		out.push(left + 'px">' + item.title + '</div>')
 	},
 	_refreshProperties: function() {
 		var pxPerMs = this._pxPerMs = jq(this).width() / this._period,
 			minDateBound = this._minDateBound,
 			maxDateBound = this._maxDateBound,
 			halfPeriod = this._period / 2,
-//			pivot = this._pivot.getTime(),
-			pivot = (this.$n('content').scrollLeft),
+			pivot = (this.$n('content').scrollLeft/pxPerMs) + minDateBound,
 			leftBound = pivot - halfPeriod,
 			rightBound = pivot + halfPeriod,
 			multiply = this._multiply,
@@ -423,8 +465,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			mLeftBound = leftBound - (period * (multiply - 1)),
 			mRightBound = rightBound + (period * (multiply - 1));
 		
-		//console.log(leftBound, mLeftBound, minDateBound, this._realLeftBound);
-		//console.log(new Date(leftBound), new Date(mLeftBound), new Date(minDateBound), new Date(this._realLeftBound));
 		this._realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound;
 		this._realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound;
 	},
@@ -447,16 +487,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			calendar = new zk.fmt.Calendar(),
 			out = [];
 			
-		//console.log('facet:', new Date(facet));
-		
+			console.log(new Date(leftBound), new Date(leftBound));
+			
 		for (; facet < rightBound ; facet = this._getNextFacet(facet, unitLevel)) {
-			//console.log('facet:', new Date(facet));
 			var left = this._getPxDistance(minDateBound, facet, pxPerMs);
 			out.push('<div class="' + this.$s('facet') + '" style="left:' 
 					+ left + 'px">' + calendar.formatDate(new Date(facet), format));
 			out.push('</div>');
 		}
-		
 		
 		if(out.length > 0)
 			jq(cave).append(out.join(''));
@@ -476,10 +514,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_getNextFacet: function(startTime, unit, includeSelf) {
 		var facetTime = new Date(startTime),
 			facetTimeArr = [];
-		
 		switch(unit + 1) {
 			case 1:
-				facetTime.setMonth(1);
+				facetTime.setMonth(0);
 			case 2:
 				facetTime.setDate(1);
 			case 3: 
@@ -491,15 +528,12 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			case 6: 
 				facetTime.setMilliseconds(0);
 		}
-		
 		if(includeSelf && facetTime.getTime() == startTime)
 			return startTime;
 	
 		facetTimeArr = [facetTime.getFullYear(), facetTime.getMonth(), facetTime.getDate(),
 			facetTime.getHours(), facetTime.getMinutes(), facetTime.getSeconds(), facetTime.getMilliseconds()];
-	
 		facetTimeArr[unit] = facetTimeArr[unit] + 1;
-	
 		return new Date(facetTimeArr[0], facetTimeArr[1], facetTimeArr[2], facetTimeArr[3], facetTimeArr[4], facetTimeArr[5], facetTimeArr[6]).getTime();
 	},
 	_getPxDistance: function(t1, t2, pxPerMs) {
@@ -566,29 +600,37 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 */
 	_onScroll: function(evt) {
 		//console.log('in scroll...');
-		this._dirtyLevel = 4;
-		this.calculate();
-		this.fire('onFoo', {foo: 'myData'});
+//		this._dirtyLevel = 4;
+//		this.calculate();
+		console.log('in onScroll...');
+		this._refreshProperties();
+		this.refreshItemAndFacet();
+		console.log('end onScroll');
+		//this.fire('onFoo', {foo: 'myData'});
 	},
 	_onScrolling: function(evt) {
 		//console.log('in scrolling...');
 	},
 	onResponse: function () {
-		if(this._dirtyLevel) {
-			this.calculate();
-		}
+		this.calculate();
 	},
 	onSize: function() {
 //		this.$supers('onSize', arguments);
 		//console.log('in onSize...');
+		jq.extend(this._updateFlag, {
+			"10": true,
+			"7": true,
+			"9": true
+		});
 		this.calculate();
 	},
 	doClick_: function (evt) {
-		//console.dir(evt);
-		//if(jq(evt.domTarget).hasClass(this.$s('event')))
-			//console.log('click event');
-		//else
-			//console.log('timeline click');
+		var $target = jq(evt.domTarget); 
+		if($target.hasClass(this.$s('item'))) {
+			this.fire('onItemSelect', {objectId: zk.parseInt($target.attr('id').split('-')[2])});
+			console.log('click item');
+		} else
+			console.log('timeline click');
 //		this.$super('doClick_', evt, true);//the super doClick_ should be called
 //		this.fire('onFoo', {foo: 'myData'});
 	}

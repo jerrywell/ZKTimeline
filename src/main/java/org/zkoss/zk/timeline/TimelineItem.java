@@ -3,7 +3,7 @@ package org.zkoss.zk.timeline;
 import java.util.Date;
 import org.zkoss.json.JSONAware;
 
-public class TimelineEvent implements JSONAware {
+public class TimelineItem implements JSONAware {
 	/**
 	 * 
 	 */
@@ -14,10 +14,10 @@ public class TimelineEvent implements JSONAware {
 	private long stopDate = -1;
 	private String title;
 	
-	public int getObjectId() {
+	int getObjectId() {
 		return objectId;
 	}
-	public void setObjectId(int objectId) {
+	void setObjectId(int objectId) {
 		this.objectId = objectId;
 	}
 	public Date getStartDate() {

@@ -9,6 +9,7 @@ import java.util.Map;
 
 import org.zkoss.lang.Objects;
 import org.zkoss.zk.au.AuRequest;
+import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
 import org.zkoss.zul.impl.XulElement;
@@ -20,7 +21,7 @@ public class Timeline extends XulElement {
 	 */
 	private static final long serialVersionUID = 1L;
 	static {
-		//addClientEvent(Timeline.class, "onFoo", 0);
+		addClientEvent(Timeline.class, "onItemSelect", CE_IMPORTANT);
 	}
 	
 	/*
@@ -29,10 +30,10 @@ public class Timeline extends XulElement {
 	private long _maxDateBound;
 	private long _minDateBound;
 	// pivot is always in the middle of navigation
-	private Date _pivot;
+	private long _pivot;
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
 	private long _period = 604800000L/7 * 365;
-	private List<TimelineEvent> _timelineEvents;
+	private List<TimelineItem> _timelineItems;
 	
 	/*
 	 * about timeline event
@@ -55,7 +56,7 @@ public class Timeline extends XulElement {
 		} catch (ParseException e) {
 			e.printStackTrace();
 		}
-		_timelineEvents = new ArrayList<TimelineEvent>();
+		_timelineItems = new ArrayList<TimelineItem>();
 		setWidth("1000px");
 		setHeight("200px");
 	}
@@ -63,19 +64,6 @@ public class Timeline extends XulElement {
 	/*
 	 * getter and setter
 	 */
-	
-	public void setTimelineEvents(List<TimelineEvent> timelineEvents) {
-		if(!Objects.equals(_timelineEvents, timelineEvents)){	
-			for (TimelineEvent timelineEvent : timelineEvents)
-				timelineEvent.setObjectId(++_eventObjectId);
-			this._timelineEvents = timelineEvents;
-			smartUpdate("timelineEvents", _timelineEvents);
-		}
-	}
-	
-	public List<TimelineEvent> getTimelineEvents() {
-		return _timelineEvents;
-	}
 	
 	public long getMaxDateBound() {
 		return _maxDateBound;
@@ -100,11 +88,11 @@ public class Timeline extends XulElement {
 	}
 
 	public Date getPivot() {
-		return _pivot;
+		return new Date(_pivot);
 	}
 
 	public void setPivot(Date pivot) {
-		this._pivot = pivot;
+		this._pivot = pivot.getTime();
 		smartUpdate("pivot", _pivot);
 	}
 
@@ -200,10 +188,15 @@ public class Timeline extends XulElement {
 	 * self method
 	 */
 	
-	public void addTimelineEvent(TimelineEvent event) {
-		event.setObjectId(++_eventObjectId);
-		_timelineEvents.add(event);
-		smartUpdate("timelineEvent", event);
+	public void addTimelineItem(TimelineItem item) {
+		item.setObjectId(++_eventObjectId);
+		_timelineItems.add(item);
+		smartUpdate("addedItem", item);
+	}
+	
+	public void removeTimelineItem(TimelineItem item) {
+		_timelineItems.remove(item);
+		smartUpdate("removedItem", item);
 	}
 	
 	/*
@@ -222,8 +215,8 @@ public class Timeline extends XulElement {
 		
 		render(renderer, "pivot", _pivot);
 		
-		if(_timelineEvents.size() != 0)
-			render(renderer, "timelineEvents", _timelineEvents);
+		if(_timelineItems.size() != 0)
+			render(renderer, "timelineItems", _timelineItems);
 		
 		if(!_yearFormat.equals("yyyy")) render(renderer, "yearFormat", _yearFormat);
 		if(!_monthFormat.equals("MM")) render(renderer, "monthFormat", _monthFormat);
@@ -239,12 +232,40 @@ public class Timeline extends XulElement {
 		final String cmd = request.getCommand();
 		final Map data = request.getData();
 		
-		if (cmd.equals("onFoo")) {
-			final String foo = (String)data.get("foo");
-			System.out.println("do onFoo, data:" + foo);
-			Events.postEvent(Event.getEvent(request));
+		if (cmd.equals("onItemSelect")) {
+			final int oid = (Integer) data.get("objectId");
+			TimelineEvent event = new TimelineEvent("onItemSelect", this);
+			for (TimelineItem item : _timelineItems) {
+				if(item.getObjectId() == oid) {
+					event.setSelectedItem(item);
+					break;
+				}
+			}
+			Events.postEvent(event);
+			System.out.println("do onItemSelect, data:" + event);
 		} else
 			super.service(request, everError);
+	}
+	
+	public class TimelineEvent extends Event{
+		private static final long serialVersionUID = 1L;
+		private TimelineItem selectedItem;
+
+		public TimelineEvent(String name) {
+			super(name);
+		}
+
+		public TimelineEvent(String name, Component target) {
+			super(name, target);
+		}
+		
+		public TimelineItem getSelectedItem() {
+			return selectedItem;
+		}
+
+		public void setSelectedItem(TimelineItem selectedItem) {
+			this.selectedItem = selectedItem;
+		}
 	}
 
 	/**
@@ -257,29 +278,26 @@ public class Timeline extends XulElement {
 	/*
 	 * inner class
 	 */
-	public enum TimeUnit{
-		YEAR, MONTH, DAY, HOUR, MINUTE, SECOND, MILLISECOND
-	}
 	
-	class DefaultRenderer implements Renderer<TimelineEvent>{
+	class DefaultRenderer implements Renderer<TimelineItem>{
 
-		public long getStartDate(TimelineEvent t) {
+		public long getStartDate(TimelineItem t) {
 			return t.getStartDate().getTime();
 		}
 
-		public long getStopDate(TimelineEvent t) {
+		public long getStopDate(TimelineItem t) {
 			return t.getStopDate().getTime();
 		}
 
-		public int getObjectId(TimelineEvent t) {
+		public int getObjectId(TimelineItem t) {
 			return t.getObjectId();
 		}
 
-		public String getHTMLHead(TimelineEvent t) {
+		public String getHTMLHead(TimelineItem t) {
 			return "<div ";
 		}
 		
-		public String getHTMLTail(TimelineEvent t) {
+		public String getHTMLTail(TimelineItem t) {
 			return ">" + t.getTitle() + "</div>";
 		}
 	};

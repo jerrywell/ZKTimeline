@@ -55,7 +55,7 @@
 }
 
 
-.z-timeline .z-timeline-event{
+.z-timeline .z-timeline-item{
 	height: 40px;
 	width: 140px;
 	background-color: #EFEFEF;
@@ -75,7 +75,7 @@
 	padding: 5px;
 }
 
-.z-timeline .z-timeline-event:hover{
+.z-timeline .z-timeline-item:hover{
 	border-color: #999999;
 	background-color: white;
 	color: black;
@@ -83,7 +83,7 @@
 }
 
 /*
-.z-timeline .z-timeline-event:hover{
+.z-timeline .z-timeline-item:hover{
 	border-color: #B6B6B6;
 	background-color: white;
 	color: #0088CC;
