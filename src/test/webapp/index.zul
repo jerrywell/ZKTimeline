@@ -3,7 +3,7 @@
 		Date d = new Date();
 	]]></zscript>
  	<window id="win" title="Hello World!!" border="normal">
-		<timeline id="myComp" pivot="${d}" width="1200px" height="200px" onItemSelect='item = event.getSelectedItem()'/>
+		<timeline id="myComp" pivot="${d}" onItemSelect='item = event.getSelectedItem()'/>
 		<zscript><![CDATA[
 			import org.zkoss.zk.timeline.*;
 			java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
@@ -59,6 +59,12 @@
 		<button label="add pivot" onClick="setPivot()"/>
 		<separator/>
 		<button label="remove selected item" onClick="removeSeletedItem(item)"/>
+		<separator/>
+		width: <textbox id="width" value="${myComp.getWidth()}"/>
+		<button label="change width" onClick="myComp.setWidth(width.getValue())"/>
+		<separator/>
+		height: <textbox id="height" value="${myComp.getHeight()}"/>
+		<button label="change height" onClick='myComp.setHeight(height.getValue())'/>
 	</window>
 	<button label="change vision" onClick="changeVision()"></button>
 	<datebox value="${d }"></datebox>

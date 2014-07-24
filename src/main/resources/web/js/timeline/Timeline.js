@@ -133,7 +133,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_minDateBound: new Date('2014/1/1').getTime(),
 	_maxDateBound: new Date('2014/12/31').getTime(),
 	_yearFormat: "yyyy",
-	_monthFormat: "MM",
+	_monthFormat: "yyyy/MM",
 	_dayFormat: "dd",
 	_hourFormat: "hh",
 	_minuteFormat: "mm",
@@ -153,6 +153,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_processedLeftBound: Number.MAX_VALUE,
 	_processedRightBound: Number.MIN_VALUE,
 	_updateFlag: {},
+	_$selectedItem: null,
+	_contentHeight: null,
 	
 	_year: 0,
 	_month: 1,
@@ -170,6 +172,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		1000,
 		1
 	],
+	_steps: {
+		rebuildFacet: "1",
+		updateFacet: "2",
+		rebuildItem: "3",
+		updateItem: "4",
+		refeshInside: "5",
+		updateItem: "6",
+		gotoTime: "7",
+		updateGroupView: "8",
+		updateItemAndFacet: "9",
+		updateProperties: "10"
+	},
 	
 	/**
 	 * Don't use array/object as a member field, it's a restriction for ZK object,
@@ -193,19 +207,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		 */
 		maxDateBound: function() {
 			if(this.desktop) {
-				jq.extend(this._updateFlag, {
-					"10": true,
-					"9": true
-				});
+				var opts = {};
+				opts[this._steps.updateProperties] = true;
+				opts[this._steps.updateItemAndFacet] = true;
+				jq.extend(this._updateFlag, opts);
 			}
 		},
 		
 		minDateBound: function() {
 			if(this.desktop) {
-				jq.extend(this._updateFlag, {
-					"10": true,
-					"9": true
-				});
+				var updateFlag = this._updateFlag;
+				updateFlag[this._steps.updateProperties] = true;
+				updateFlag[this._steps.updateItemAndFacet] = true;
 			}
 		},
 		
@@ -213,26 +226,50 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		pivot: function() {
 			if(this.desktop) {
-				jq.extend(this._updateFlag, {
-					"10": true,
-					"7": true,
-					"9": true
-				});
+				var updateFlag = this._updateFlag;
+				updateFlag[this._steps.updateProperties] = true;
+				updateFlag[this._steps.gotoTime] = true;
+				updateFlag[this._steps.updateItemAndFacet] = true;
 			}
 		},
 		
 		period: function() {
 			if(this.desktop) {
-				jq.extend(this._updateFlag, {
-					"10": true,
-					"5": true,
-					"1": true,
-					"3": true,
-					"7": true,
-					"9": true
-				});
+				var updateFlag = this._updateFlag;
+				updateFlag[this._steps.updateProperties] = true;
+				updateFlag[this._steps.refeshInside] = true;
+				updateFlag[this._steps.rebuildFacet] = true;
+				updateFlag[this._steps.rebuildItem] = true;
+				updateFlag[this._steps.gotoTime] = true;
+				updateFlag[this._steps.updateItemAndFacet] = true;
 			}
 		}
+		
+//		width: function() {
+//			this.$supers(timeline.Timeline, 'width', arguments);
+//			if(this.desktop) {
+//				var updateFlag = this._updateFlag;
+//				updateFlag[this._steps.updateProperties] = true;
+//				updateFlag[this._steps.refeshInside] = true;
+//				updateFlag[this._steps.rebuildFacet] = true;
+//				updateFlag[this._steps.rebuildItem] = true;
+//				updateFlag[this._steps.gotoTime] = true;
+//				updateFlag[this._steps.updateItemAndFacet] = true;
+//			}
+//		},
+//		
+//		height: function() {
+//			this.$supers(timeline.Timeline, 'height', arguments);
+//			if(this.desktop) {
+//				var updateFlag = this._updateFlag;
+//				updateFlag[this._steps.updateProperties] = true;
+//				updateFlag[this._steps.refeshInside] = true;
+//				updateFlag[this._steps.rebuildFacet] = true;
+//				updateFlag[this._steps.rebuildItem] = true;
+//				updateFlag[this._steps.gotoTime] = true;
+//				updateFlag[this._steps.updateItemAndFacet] = true;
+//			}
+//		}
 		
 	},
 	/**
@@ -242,17 +279,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 * Like the example below, they are the same as we mentioned in $define section.
 	 */
 	setAddedItem: function(val) {
+		var updateFlag = this._updateFlag;
+		updateFlag[this._steps.updateItem] = true;
 		this._addedItemQueue.push(val);
-		jq.extend(this._updateFlag, {
-			"6": true
-		});
 	},
 	setRemovedItem: function(val) {
-		console.log(val);
+		var updateFlag = this._updateFlag;
+		updateFlag[this._steps.updateItem] = true;
 		this._removedItemQueue.push(val);
-		jq.extend(this._updateFlag, {
-			"6": true
-		});
 	},
 	/*
 	getText:function(){ return this._text; },
@@ -272,24 +306,26 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		jq.extend(updateFlag, this._updateFlag);
 		this._updateFlag = {};
 		
-		if(updateFlag['6']) {
+		if(updateFlag[this._steps.updateItem]) {
 			this.handleItemsUpdate();
 		}
-		if(updateFlag['10']) 
+		if(updateFlag[this._steps.updateProperties]) 
 			this._refreshProperties();
-		if(updateFlag['5'] && updateFlag['1'] && updateFlag['3']) {
-			this.calculateInsideWidth();
-			this._processedLeftBound = this._realRightBound;
-			this._processedRightBound = this._realLeftBound;
-			this.cleanFacet();
-			this.buildFacet();
-			this.cleanItem();
-			this.renderItem(null, this.$n('content-cave'));
+		if(updateFlag[this._steps.refeshInside] 
+			&& updateFlag[this._steps.rebuildFacet] 
+			&& updateFlag[this._steps.rebuildItem]) {
+				this.calculateInsideWidth();
+				this._processedLeftBound = this._realRightBound;
+				this._processedRightBound = this._realLeftBound;
+				this.cleanFacet();
+				this.buildFacet();
+				this.cleanItem();
+				this.renderItem();
 		}
-		if(updateFlag['7']) {
+		if(updateFlag[this._steps.gotoTime]) {
 			var self = this,
 				cb;
-			if(updateFlag['9'])
+			if(updateFlag[this._steps.updateItemAndFacet])
 				cb = function() {
 					self.refreshItemAndFacet.apply(self);
 				}
@@ -314,7 +350,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		if(this._realLeftBound < this._processedLeftBound)
 			this._processedLeftBound = this._realLeftBound;
-		else if(this._realRightBound > this._processedRightBound)
+		if(this._realRightBound > this._processedRightBound)
 			this._processedRightBound = this._realRightBound;
 	},
 	calculateInsideWidth: function() {
@@ -324,16 +360,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			innerWidth = periodRatio < 1 ? width : Math.ceil(periodRatio * width);
 		jq(this.$n('content-inside')).width(innerWidth);
 	},
-	renderItem: function(out, cave) {
+	renderItem: function() {
 		var indexBegin,
 			indexEnd,
 			lastIndexBegin = this._itemsIndexBegin,
 			lastIndexEnd = this._itemsIndexEnd,
-			realLeftBound = this._realLeftBound,
-			realRightBound = this._realRightBound,
-			items = this._timelineItems;
+			realLeftBound = this._processedLeftBound,
+			realRightBound = this._processedRightBound,
+			items = this._timelineItems,
+			out = [],
+			cave = this.$n('content-cave');
 		
-		out = out || [];
+		console.log(new Date(realLeftBound), new Date(realRightBound));
 		
 		// find indexBegin and indexEnd to render in boundary
 		items.sort(function(e1, e2) {
@@ -366,13 +404,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		return out;
 	},
 	refreshItemAndFacet: function() {
+		console.log('check...');
 		var mainUnitLevel = this._getFacetMainLevel(),
 			largeUnitLevel = mainUnitLevel - 1,
 			processedLeftBound = this._processedLeftBound,
 			processedRightBound = this._processedRightBound;	
 		
 		// render item
-		this.renderItem(null, this.$n('content-cave'));
+		this.renderItem();
 		
 		// build facet
 		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
@@ -463,8 +502,12 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			multiply = this._multiply,
 			period = this._period,
 			mLeftBound = leftBound - (period * (multiply - 1)),
-			mRightBound = rightBound + (period * (multiply - 1));
+			mRightBound = rightBound + (period * (multiply - 1)),
+			facetHeight = jq(this.$n('main-facet')).height() 
+				+ jq(this.$n('small-facet')).height() + jq(this.$n('large-facet')).height();
 		
+		console.log(this.$n('content-cave'), jq(this).height(), facetHeight);
+		jq(this.$n('content-cave')).height(jq(this).height() - facetHeight);
 		this._realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound;
 		this._realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound;
 	},
@@ -552,6 +595,24 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			case this._millisecond: return this._millisecondFormat;
 		}
 	},
+	_getItemByObjectId: function(oid) {
+		var items = this._timelineItems,
+			length = items.length - 1,
+			item;
+		
+		for(; item = items[length--];)
+			if(item.objectId == oid)
+				return item;
+	},
+	_selectItem: function($item) {
+		var $prev = this._$selectedItem,
+			selectedClass = this.$s('selected');
+		
+		this._$selectedItem = $item;
+		if($prev)
+			$prev.removeClass(selectedClass);
+		$item.addClass(selectedClass);
+	},
 	
 	bind_: function () {
 		/**
@@ -599,12 +660,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		please refer to http://books.zkoss.org/wiki/ZK%20Client-side%20Reference/Notifications
 	 */
 	_onScroll: function(evt) {
-		//console.log('in scroll...');
-//		this._dirtyLevel = 4;
-//		this.calculate();
 		console.log('in onScroll...');
-		this._refreshProperties();
-		this.refreshItemAndFacet();
+		var updateFlag = this._updateFlag;
+		updateFlag[this._steps.updateProperties] = true;
+		updateFlag[this._steps.updateItemAndFacet] = true;
+		this.calculate();
 		console.log('end onScroll');
 		//this.fire('onFoo', {foo: 'myData'});
 	},
@@ -615,20 +675,28 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this.calculate();
 	},
 	onSize: function() {
-//		this.$supers('onSize', arguments);
-		//console.log('in onSize...');
-		jq.extend(this._updateFlag, {
-			"10": true,
-			"7": true,
-			"9": true
-		});
+		this.$supers('onSize', arguments);
+		
+//		var updateFlag = this._updateFlag;
+//		updateFlag[this._steps.updateProperties] = true;
+//		updateFlag[this._steps.gotoTime] = true;
+//		updateFlag[this._steps.updateItemAndFacet] = true;
+		var updateFlag = this._updateFlag;
+		updateFlag[this._steps.updateProperties] = true;
+		updateFlag[this._steps.refeshInside] = true;
+		updateFlag[this._steps.rebuildFacet] = true;
+		updateFlag[this._steps.rebuildItem] = true;
+		updateFlag[this._steps.gotoTime] = true;
+		updateFlag[this._steps.updateItemAndFacet] = true;
 		this.calculate();
 	},
 	doClick_: function (evt) {
 		var $target = jq(evt.domTarget); 
 		if($target.hasClass(this.$s('item'))) {
-			this.fire('onItemSelect', {objectId: zk.parseInt($target.attr('id').split('-')[2])});
-			console.log('click item');
+			var oid = zk.parseInt($target.attr('id').split('-')[2]);
+			this.fire('onItemSelect', {objectId: oid});
+			this._selectItem($target);
+			this.gotoTime(this._pivot = this._getItemByObjectId(oid).startDate);
 		} else
 			console.log('timeline click');
 //		this.$super('doClick_', evt, true);//the super doClick_ should be called

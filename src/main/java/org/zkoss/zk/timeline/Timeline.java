@@ -57,7 +57,6 @@ public class Timeline extends XulElement {
 			e.printStackTrace();
 		}
 		_timelineItems = new ArrayList<TimelineItem>();
-		setWidth("1000px");
 		setHeight("200px");
 	}
 	
@@ -194,9 +193,12 @@ public class Timeline extends XulElement {
 		smartUpdate("addedItem", item);
 	}
 	
-	public void removeTimelineItem(TimelineItem item) {
-		_timelineItems.remove(item);
-		smartUpdate("removedItem", item);
+	public boolean removeTimelineItem(TimelineItem item) {
+		if(_timelineItems.remove(item)) {
+			smartUpdate("removedItem", item);
+			return true;
+		}else
+			return false;
 	}
 	
 	/*
