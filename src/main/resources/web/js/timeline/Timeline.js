@@ -180,7 +180,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		gotoTime: "7",
 		updateGroupView: "8",
 		updateItemAndFacet: "9",
-		updateProperties: "10"
+		updateProperties: "10",
+		updatePropertiesWithoutPivot: "11"
 	},
 	
 	/**
@@ -308,20 +309,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		jq.extend(updateFlag, this._updateFlag);
 		this._updateFlag = {};
 		
-		if(updateFlag[this._steps.updateItem]) {
-			console.log('check...');
+		if(updateFlag[this._steps.updateItem])
 			this.handleItemsUpdate();
-		}
 		
-		if(updateFlag[this._steps.updateProperties]) {
+		if(updateFlag[this._steps.updateProperties])
+			this._refreshProperties(this._pivot);
+		
+		if(updateFlag[this._steps.updatePropertiesWithoutPivot])
 			this._refreshProperties();
-//			if(this._init) {
-//				this._processedLeftBound = this._realRightBound;
-//				this._processedRightBound = this._realLeftBound;
-//				this._init = false;
-//			}
-		} 
-		
 		
 		if(updateFlag[this._steps.refeshInside])
 			this.calculateInsideWidth();
@@ -365,19 +360,13 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		jq(this.$n('content-inside')).width(innerWidth);
 	},
 	renderItem: function() {
-		var indexBegin,
-			indexEnd,
-			lastIndexBegin = this._itemsIndexBegin,
-			lastIndexEnd = this._itemsIndexEnd,
-			boundary = this._calculateRenderBoundary(),
+		var boundary = this._calculateRenderBoundary(),
 			realLeftBound = boundary.leftBound,
 			realRightBound = boundary.rightBound,
 			items = this._timelineItems,
 			out = [],
 			cave = this.$n('content-cave');
-		
-		console.log(new Date(realLeftBound), new Date(realRightBound));
-		
+				
 		// find indexBegin and indexEnd to render in boundary
 		items.sort(function(e1, e2) {
 			var startDate1 = e1.startDate,
@@ -389,22 +378,15 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				return startDate1 - startDate2;
 		});
 		for(var i=0, length=items.length; i < length; i++) {
-			var item = items[i],
-				startDate = item.startDate;
-			if(startDate >= realLeftBound) {
-				indexBegin = i;
-				for(; i < length && startDate < realRightBound; i++) {
-					console.log('generate item...');
-					var item = items[i];
-						startDate = item.startDate;
+			if(items[i].startDate >= boundary.leftBound) {
+				var item;
+				while((item = items[i++]) && item.startDate <= boundary.rightBound)
 					this._itemOut(out, item);
-				}
-				indexEnd = i - 1;
+				break;
 			}
-				
 		}
 		
-		if(cave)
+		if(cave && out.length > 0)
 			jq(cave).append(out.join(''));
 		
 		return out;
@@ -475,14 +457,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				+ '" class="' + this.$s('item') + '" style="left:');
 		out.push(left + 'px">' + item.title + '</div>')
 	},
-	_refreshProperties: function() {
+	_refreshProperties: function(pivot) {
 		var pxPerMs = this._pxPerMs = jq(this).width() / this._period,
 			minDateBound = this._minDateBound,
 			maxDateBound = this._maxDateBound,
 			halfPeriod = this._period / 2,
-			pivot = (this.$n('content').scrollLeft/pxPerMs) + minDateBound,
-			leftBound = pivot - halfPeriod,
-			rightBound = pivot + halfPeriod,
+			center = pivot || (this.$n('content').scrollLeft/pxPerMs) + minDateBound,
+			leftBound = center - halfPeriod,
+			rightBound = center + halfPeriod,
 			multiply = this._multiply,
 			period = this._period,
 			mLeftBound = leftBound - (period * (multiply - 1)),
@@ -670,7 +652,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_onScroll: function(evt) {
 		console.log('in onScroll...');
 		var updateFlag = this._updateFlag;
-		updateFlag[this._steps.updateProperties] = true;
+		updateFlag[this._steps.updatePropertiesWithoutPivot] = true;
 		updateFlag[this._steps.updateItemAndFacet] = true;
 		this.calculate();
 		console.log('end onScroll');
