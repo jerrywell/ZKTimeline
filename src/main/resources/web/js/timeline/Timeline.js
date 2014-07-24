@@ -50,7 +50,6 @@ function TimelineSlide(wgt, $dragPane, $target) {
 		},
 		doMomentum = function(event1, event2) {
 			if(!(event1 && event2)) return;
-
 			var x1 = event1.pageX,
 				t1 = event1.timeStamp,
 				x2 = event2.pageX,
@@ -65,7 +64,6 @@ function TimelineSlide(wgt, $dragPane, $target) {
 
 				// Distance moved (Euclidean distance)
 				distance = Math.pow(x1-x2, 2);
-
 			if (distance > minDistance) {
 				// Momentum
 				var lastStepTime = new Date(),
@@ -78,7 +76,6 @@ function TimelineSlide(wgt, $dragPane, $target) {
 							wgt._onScroll.apply(wgt, event2);
 							return;
 						}
-
 						speedX *= (currentStep / 100);
 
 						var now = new Date(),
@@ -104,7 +101,7 @@ function TimelineSlide(wgt, $dragPane, $target) {
 		init: function() {
 			$dragPane.bind('mousedown', function(event) {
 				if(!dragging) {
-					beginItem = event;
+					beginEvent = event;
 					dragging = true;
 					pageX = event.pageX;
 					targetX = $target.offset().left;
@@ -129,7 +126,7 @@ function TimelineSlide(wgt, $dragPane, $target) {
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineItems: [],
 	_pivot: null,
-	_period: (604800000/7) * 365,
+	_period: (604800000/7) * 180,
 	_minDateBound: new Date('2014/1/1').getTime(),
 	_maxDateBound: new Date('2014/12/31').getTime(),
 	_yearFormat: "yyyy",
@@ -155,6 +152,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_updateFlag: {},
 	_$selectedItem: null,
 	_contentHeight: null,
+	_init: true,	// only use once after initialize
 	
 	_year: 0,
 	_month: 1,
@@ -279,14 +277,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	 * Like the example below, they are the same as we mentioned in $define section.
 	 */
 	setAddedItem: function(val) {
-		var updateFlag = this._updateFlag;
-		updateFlag[this._steps.updateItem] = true;
-		this._addedItemQueue.push(val);
+		if(this.desktop) {
+			var updateFlag = this._updateFlag;
+			updateFlag[this._steps.updateItem] = true;
+			this._addedItemQueue.push(val);
+		}
 	},
 	setRemovedItem: function(val) {
-		var updateFlag = this._updateFlag;
-		updateFlag[this._steps.updateItem] = true;
-		this._removedItemQueue.push(val);
+		if(this.desktop) {
+			var updateFlag = this._updateFlag;
+			updateFlag[this._steps.updateItem] = true;
+			this._removedItemQueue.push(val);
+		}
 	},
 	/*
 	getText:function(){ return this._text; },
@@ -307,30 +309,39 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this._updateFlag = {};
 		
 		if(updateFlag[this._steps.updateItem]) {
+			console.log('check...');
 			this.handleItemsUpdate();
 		}
-		if(updateFlag[this._steps.updateProperties]) 
+		
+		if(updateFlag[this._steps.updateProperties]) {
 			this._refreshProperties();
-		if(updateFlag[this._steps.refeshInside] 
-			&& updateFlag[this._steps.rebuildFacet] 
-			&& updateFlag[this._steps.rebuildItem]) {
-				this.calculateInsideWidth();
+//			if(this._init) {
+//				this._processedLeftBound = this._realRightBound;
+//				this._processedRightBound = this._realLeftBound;
+//				this._init = false;
+//			}
+		} 
+		
+		
+		if(updateFlag[this._steps.refeshInside])
+			this.calculateInsideWidth();
+		
+		cb = jq.proxy(function() {
+			if(updateFlag[this._steps.rebuildFacet] && updateFlag[this._steps.rebuildItem]) {
 				this._processedLeftBound = this._realRightBound;
 				this._processedRightBound = this._realLeftBound;
-				this.cleanFacet();
-				this.buildFacet();
-				this.cleanItem();
-				this.renderItem();
-		}
-		if(updateFlag[this._steps.gotoTime]) {
-			var self = this,
-				cb;
-			if(updateFlag[this._steps.updateItemAndFacet])
-				cb = function() {
-					self.refreshItemAndFacet.apply(self);
-				}
+				this._updateItemAndFacet(true);
+			}
+			
+			if(updateFlag[this._steps.updateItemAndFacet]) {
+				this._updateItemAndFacet();
+			}
+		}, this);
+		
+		if(updateFlag[this._steps.gotoTime])
 			this.gotoTime(this._pivot, cb);
-		}
+		else
+			cb();
 	},
 	cleanFacet: function() {
 		jq('.' + this.$s('facet')).remove();
@@ -340,18 +351,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	},
 	buildFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
-			largeUnitLevel = mainUnitLevel - 1,
-			processedLeftBound = this._processedLeftBound,
-			processedRightBound = this._processedRightBound;
+			largeUnitLevel = mainUnitLevel - 1;
 		
 		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
 		if(largeUnitLevel >= this._year)
 			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
-		
-		if(this._realLeftBound < this._processedLeftBound)
-			this._processedLeftBound = this._realLeftBound;
-		if(this._realRightBound > this._processedRightBound)
-			this._processedRightBound = this._realRightBound;
 	},
 	calculateInsideWidth: function() {
 		var period = this._maxDateBound - this._minDateBound,
@@ -365,8 +369,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			indexEnd,
 			lastIndexBegin = this._itemsIndexBegin,
 			lastIndexEnd = this._itemsIndexEnd,
-			realLeftBound = this._processedLeftBound,
-			realRightBound = this._processedRightBound,
+			boundary = this._calculateRenderBoundary(),
+			realLeftBound = boundary.leftBound,
+			realRightBound = boundary.rightBound,
 			items = this._timelineItems,
 			out = [],
 			cave = this.$n('content-cave');
@@ -389,6 +394,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			if(startDate >= realLeftBound) {
 				indexBegin = i;
 				for(; i < length && startDate < realRightBound; i++) {
+					console.log('generate item...');
 					var item = items[i];
 						startDate = item.startDate;
 					this._itemOut(out, item);
@@ -402,27 +408,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			jq(cave).append(out.join(''));
 		
 		return out;
-	},
-	refreshItemAndFacet: function() {
-		console.log('check...');
-		var mainUnitLevel = this._getFacetMainLevel(),
-			largeUnitLevel = mainUnitLevel - 1,
-			processedLeftBound = this._processedLeftBound,
-			processedRightBound = this._processedRightBound;	
-		
-		// render item
-		this.renderItem();
-		
-		// build facet
-		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
-		if(largeUnitLevel >= this._year)
-			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
-		
-		// located processed area
-		if(this._realLeftBound < this._processedLeftBound)
-			this._processedLeftBound = this._realLeftBound;
-		if(this._realRightBound > this._processedRightBound)
-			this._processedRightBound = this._realRightBound;
 	},
 	handleItemsUpdate: function() {
 		var addedQueue = this._addedItemQueue,
@@ -438,6 +423,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		for(;i < length; i++) {
 			item = addedQueue[i];
+			console.log('generate item update...');
 			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound)
 				this._itemOut(out, item);
 			items.push(item);
@@ -476,12 +462,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		if(scrollLeft > safeLeftBound)
 			scrollLeft = safeLeftBound; 
 		
-//		this._dirtyLevel = 1;
-		
 		jq(this.$n('content')).animate({
 			scrollLeft: scrollLeft
 		},{
-			duration: zk(this).getAnimationSpeed(500),
+			duration: zk(this).getAnimationSpeed(200),
 			complete: cb
 		});
 	},
@@ -518,19 +502,16 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			pxPerUnit = pxPerMs * unit,
 			minDateBound = this._minDateBound,
 
-			realLeftBound = this._realLeftBound,
-			realRightBound = this._realRightBound,
-			processedLeftBound = this._processedLeftBound,
-			processedRightBound = this._processedRightBound,
-			leftBound = realLeftBound < processedLeftBound ? realLeftBound : processedRightBound,
-			rightBound = realRightBound > processedRightBound ? realRightBound : processedLeftBound,
+			boundary = this._calculateRenderBoundary(),
+			leftBound = boundary.leftBound,
+			rightBound = boundary.rightBound,
 			
 			facet = this._getNextFacet(leftBound, unitLevel, true),
 			format = this._getFormat(unitLevel),
 			calendar = new zk.fmt.Calendar(),
 			out = [];
 			
-			console.log(new Date(leftBound), new Date(leftBound));
+			console.log(new Date(leftBound), new Date(rightBound));
 			
 		for (; facet < rightBound ; facet = this._getNextFacet(facet, unitLevel)) {
 			var left = this._getPxDistance(minDateBound, facet, pxPerMs);
@@ -613,6 +594,33 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			$prev.removeClass(selectedClass);
 		$item.addClass(selectedClass);
 	},
+	_calculateRenderBoundary: function() {
+		var realLeftBound = this._realLeftBound,
+			realRightBound = this._realRightBound,
+			processedLeftBound = this._processedLeftBound,
+			processedRightBound = this._processedRightBound,
+			leftBound = realLeftBound < processedLeftBound ? realLeftBound : processedRightBound,
+			rightBound = realRightBound > processedRightBound ? realRightBound : processedLeftBound;
+		
+		console.log(realLeftBound, realRightBound, processedLeftBound, processedRightBound);
+			
+		return {
+			leftBound: leftBound,
+			rightBound: rightBound
+		};
+	},
+	_updateItemAndFacet: function(cleanBeforeBuild) {
+		if(cleanBeforeBuild) {
+			this.cleanFacet();
+			this.cleanItem();
+		}
+		this.renderItem();
+		this.buildFacet();
+		if(this._realLeftBound < this._processedLeftBound)
+			this._processedLeftBound = this._realLeftBound;
+		if(this._realRightBound > this._processedRightBound)
+			this._processedRightBound = this._realRightBound;
+	},
 	
 	bind_: function () {
 		/**
@@ -666,7 +674,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		updateFlag[this._steps.updateItemAndFacet] = true;
 		this.calculate();
 		console.log('end onScroll');
-		//this.fire('onFoo', {foo: 'myData'});
 	},
 	_onScrolling: function(evt) {
 		//console.log('in scrolling...');

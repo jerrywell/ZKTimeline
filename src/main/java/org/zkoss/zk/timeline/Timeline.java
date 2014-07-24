@@ -32,7 +32,7 @@ public class Timeline extends XulElement {
 	// pivot is always in the middle of navigation
 	private long _pivot;
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
-	private long _period = 604800000L/7 * 365;
+	private long _period = 604800000L/7 * 180;
 	private List<TimelineItem> _timelineItems;
 	
 	/*
