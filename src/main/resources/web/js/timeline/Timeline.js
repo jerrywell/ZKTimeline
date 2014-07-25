@@ -351,6 +351,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
 		if(largeUnitLevel >= this._year)
 			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
+		
+		this.updateItemPosition();
 	},
 	calculateInsideWidth: function() {
 		var period = this._maxDateBound - this._minDateBound,
@@ -451,6 +453,37 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			complete: cb
 		});
 	},
+	
+	updateItemPosition: function() {
+		var items = this._timelineItems,
+			height = jq('.' + this.$s('item')).eq(0).outerHeight(),
+			bandSize = Math.floor(jq(this.$n('content-cave')).height() / height),
+			bands = [],
+			best = Number.MAX_VALUE,
+			bestIdx = -1;
+		
+		for(var i = 0; i < bandSize; i++)
+			bands.push([]);
+		
+		for(var i = 0, length = items.length; i < length; i++) {
+			var item = items[i];
+			for(var j = 0; j < bandSize; j++) {
+				var band = bands[j],
+					ele = band[band.length - 1],
+					startDate = ele ? ele.startDate : Number.MIN_VALUE;
+				console.log(startDate);
+				if(startDate < best) {
+					best = startDate;
+					bestIdx = j;
+				}
+			}
+			jq('#' + this.uuid + '-item-' + item.objectId).css('top', height * bestIdx + 'px');
+			bands[bestIdx].push(item);
+			best = Number.MAX_VALUE
+		}
+		console.log(bands.length, bands);
+	},
+	
 	_itemOut: function(out, item) {
 		var left = this._getPxDistance(this._minDateBound, item.startDate, this._pxPerMs);
 		out.push('<div id="' + this.uuid + '-item-' + item.objectId 
@@ -472,7 +505,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			facetHeight = jq(this.$n('main-facet')).height() 
 				+ jq(this.$n('small-facet')).height() + jq(this.$n('large-facet')).height();
 		
-		console.log(this.$n('content-cave'), jq(this).height(), facetHeight);
+//		console.log(new Date(leftBound), new Date(rightBound), new Date(mLeftBound), new Date(mRightBound));
+		
 		jq(this.$n('content-cave')).height(jq(this).height() - facetHeight);
 		this._realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound;
 		this._realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound;

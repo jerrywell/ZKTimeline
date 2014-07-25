@@ -7,19 +7,27 @@
 		<zscript><![CDATA[
 			import org.zkoss.zk.timeline.*;
 			java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
-			TimelineItem e1 = new TimelineItem();
-			e1.setTitle("e1");
-			e1.setStartDate(formater.parse("2015/9/22 11:11:11"));
-			e1.setStopDate(new Date());
-			TimelineItem e2 = new TimelineItem();
-			e2.setTitle("e2");
-			e2.setStartDate(formater.parse("2014/10/23 11:11:11"));
-			TimelineItem e3 = new TimelineItem();
-			e3.setTitle("e3");
-			e3.setStartDate(formater.parse("2015/11/21 11:11:11"));
-			myComp.addTimelineItem(e1);
-			myComp.addTimelineItem(e2);
-			myComp.addTimelineItem(e3);
+			Date d = formater.parse("2014/06/23 11:11:11");
+			for(int i = 0; i < 100; i++) {
+				d = new Date(d.getTime() + 1000 * 60 * 60 * 24);
+				TimelineItem ee = new TimelineItem();
+				ee.setTitle("e1");
+				ee.setStartDate(d);
+				myComp.addTimelineItem(ee);
+			}
+//			TimelineItem e1 = new TimelineItem();
+//			e1.setTitle("e1");
+//			e1.setStartDate(formater.parse("2015/9/22 11:11:11"));
+//			e1.setStopDate(new Date());
+//			TimelineItem e2 = new TimelineItem();
+//			e2.setTitle("e2");
+//			e2.setStartDate(formater.parse("2014/10/23 11:11:11"));
+//			TimelineItem e3 = new TimelineItem();
+//			e3.setTitle("e3");
+//			e3.setStartDate(formater.parse("2015/11/21 11:11:11"));
+//			myComp.addTimelineItem(e1);
+//			myComp.addTimelineItem(e2);
+//			myComp.addTimelineItem(e3);
 		                  
 			public void plus(){
 				myComp.setPeriod(myComp.getPeriod() + Math.round(myComp.getPeriod() * 0.3));
@@ -60,12 +68,4 @@
 		<separator/>
 		<button label="remove selected item" onClick="removeSeletedItem(item)"/>
 	</window>
-	<button label="change vision" onClick="changeVision()"></button>
-	<datebox value="${d }"></datebox>
-	<zscript><![CDATA[
-		boolean visible = true;
-		public void changeVision() {
-			win.setVisible((visible = !visible));
-		}
-	]]></zscript>
 </zk>

@@ -40,7 +40,7 @@
 		When ZK try to load the package , it will load the dependency first.
 
 -->
-<package name="timeline" language="xul/html" depends="zul" >
+<package name="timeline" language="xul/html" depends="zul,zk.fmt" >
 
 	<!--
 
