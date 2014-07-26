@@ -22,20 +22,33 @@
 }
 
 .z-timeline .z-timeline-small-facet{
-	height: 5px;
+	height: 2px;
 	width: 100%;
-	background-image: url(${c:encodeThemeURL('~./zul/img/timeline/small-facet.png')});
-	background-repeat: repeat;
+	background-color: rgb(223, 223, 223);
 }
 
 .z-timeline .z-timeline-main-facet{
 	width: 100%;
 	height: 30px;
+	font-family: "Segoe UI","Helvetica Neue",Helvetica,sans-serif;
+	font-size: 11pt;
+}
+
+.z-timeline .z-timeline-facet{
+	position: absolute;
 }
 
 .z-timeline .z-timeline-main-facet .z-timeline-facet{
 	padding-left: 5px;
-	border-left: 1px solid gray;
+	color: rgb(161, 161, 161);
+}
+
+.z-timeline .z-timeline-main-facet .z-timeline-facet::before{
+	content: " ";
+	height: 5px;
+	padding-right: 3px;
+	margin-right: 5px;
+	background-color: rgb(223, 223, 223);
 }
 
 .z-timeline .z-timeline-large-facet{
@@ -44,9 +57,7 @@
 	font-size: 20px;
 }
 
-.z-timeline .z-timeline-facet{
-	position: absolute;
-}
+
 
 .z-timeline .z-timeline-main-facet .z-timeline-fbg{
 	background-image: url(${c:encodeThemeURL('~./zul/img/timeline/small-facet.png')});
@@ -75,12 +86,14 @@
 	padding: 5px;
 }
 
+<c:if test="${!c:browser('ios') && !c:browser('android')}">
 .z-timeline .z-timeline-item:hover{
 	border-color: #999999;
 	background-color: white;
 	color: black;
 	z-index: 100;
 }
+</c:if>
 
 .z-timeline .z-timeline-selected {
 	border-color: #999999 !important;

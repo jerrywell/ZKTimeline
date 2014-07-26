@@ -22,6 +22,7 @@ public class Timeline extends XulElement {
 	private static final long serialVersionUID = 1L;
 	static {
 		addClientEvent(Timeline.class, "onItemSelect", CE_IMPORTANT);
+		addClientEvent(Timeline.class, "onTest", CE_IMPORTANT);
 	}
 	
 	/*
@@ -245,6 +246,9 @@ public class Timeline extends XulElement {
 			}
 			Events.postEvent(event);
 			System.out.println("do onItemSelect, data:" + event);
+		} else if (cmd.equals("onTest")) {
+//			final int test = (Integer) data.get("test1");
+			System.out.println("do onTest, data:" + data.get("test1") + ", " +data.get("test2") + ", " + data.get("test3") + ", " + data.get("test4"));
 		} else
 			super.service(request, everError);
 	}

@@ -3,11 +3,37 @@
 		Date d = new Date();
 	]]></zscript>
  	<window id="win" title="Hello World!!" border="normal">
-		<timeline id="myComp" pivot="${d}" height="250px" onItemSelect='item = event.getSelectedItem()'/>
+		<timeline id="myComp" pivot="${d}" height="250px" onItemSelect='item = event.getSelectedItem()' onTest=""/>
 		<zscript><![CDATA[
 			import org.zkoss.zk.timeline.*;
 			java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
 			Date d = formater.parse("2014/06/23 11:11:11");
+			
+			TimelineItem ee = new TimelineItem();
+			ee.setTitle("e11");
+			ee.setStartDate(d);
+			myComp.addTimelineItem(ee);
+			
+			ee = new TimelineItem();
+			ee.setTitle("e12");
+			ee.setStartDate(d);
+			myComp.addTimelineItem(ee);
+			
+			ee = new TimelineItem();
+			ee.setTitle("e13");
+			ee.setStartDate(d);
+			myComp.addTimelineItem(ee);
+			
+			ee = new TimelineItem();
+			ee.setTitle("e14");
+			ee.setStartDate(d);
+			myComp.addTimelineItem(ee);
+			
+			ee = new TimelineItem();
+			ee.setTitle("e15");
+			ee.setStartDate(d);
+			myComp.addTimelineItem(ee);
+			
 			for(int i = 0; i < 100; i++) {
 				d = new Date(d.getTime() + 1000 * 60 * 60 * 24);
 				TimelineItem ee = new TimelineItem();

@@ -20,109 +20,6 @@
  *
  */
 
-function TimelineSlide(wgt, $dragPane, $target) {
-	if(!$target) $target = $dragPane;
-	var dragging = false,
-		PageX = 0,
-		targetX = 0, 
-		minDistance = 40,
-		friction = 1,
-		target = $target.get(0),
-		$content = jq(wgt.$n('content')),
-		$insideContent = jq(wgt.$n('content-inside')),
-		beginEvent,
-		startTracking = function(event) {
-			var pageX1 = event.pageX,
-				scrollLeft = target.scrollLeft + pageX - pageX1;
-			
-			pageX = pageX1;
-			
-			if(scrollLeft < 0 || scrollLeft + $content.width() > $insideContent.width())
-				return;
-			
-			target.scrollLeft = scrollLeft;
-		},
-		stopTracking = function(event) {
-			$dragPane.unbind('mousemove');
-			dragging = false;
-			doMomentum(beginEvent, event);
-			beginEvent = null;
-		},
-		doMomentum = function(event1, event2) {
-			if(!(event1 && event2)) return;
-			var x1 = event1.pageX,
-				t1 = event1.timeStamp,
-				x2 = event2.pageX,
-				t2 = event2.timeStamp,
-
-				// Deltas
-				dX = x2 - x1,
-				dMs = Math.max(t2 - t1, 1),
-
-				// Speeds
-				speedX = -Math.max(Math.min(dX/dMs, 1), -1),
-
-				// Distance moved (Euclidean distance)
-				distance = Math.pow(x1-x2, 2);
-			if (distance > minDistance) {
-				// Momentum
-				var lastStepTime = new Date(),
-					limitStep = 100,
-					lastLeft = -1,
-					currentStep = limitStep,
-					interval = setInterval(function(){
-						if(currentStep -- == 0) {
-							clearInterval(interval);
-							wgt._onScroll.apply(wgt, event2);
-							return;
-						}
-						speedX *= (currentStep / 100);
-
-						var now = new Date(),
-							stepDuration = now.getTime() - lastStepTime.getTime(),
-							newLeft = (target.scrollLeft + (speedX * stepDuration / friction));
-
-						//console.log(newLeft, target.scrollLeft, speedX, currentStep);
-
-						lastStepTime = now;
-						if(newLeft < 0) 
-							newLeft = 0;
-						else if(newLeft + $content.width() > $insideContent.width()) {
-							newLeft = $insideContent.width() - $content.width();
-						}
-						
-						if(lastLeft != newLeft)
-							target.scrollLeft = lastLeft = newLeft
-					}, Math.abs(speedX) * 2000 / 100);
-			}
-		};
-
-	return {
-		init: function() {
-			$dragPane.bind('mousedown', function(event) {
-				if(!dragging) {
-					beginEvent = event;
-					dragging = true;
-					pageX = event.pageX;
-					targetX = $target.offset().left;
-					a = event;
-					$dragPane.bind('mousemove', startTracking);
-				}
-				event.preventDefault();
-				
-			}).bind('mouseup', stopTracking).bind('mouseleave', function(event) {
-				if(dragging)
-					stopTracking(event);
-			});
-			return this;
-		},
-		destroy: function() {
-			$dragPane.unbind('mousedown mouseup');
-			return this;
-		}
-	};
-}
-
 timeline.Timeline = zk.$extends(zul.Widget, {
 	_timelineItems: [],
 	_pivot: null,
@@ -131,11 +28,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_maxDateBound: new Date('2014/12/31').getTime(),
 	_yearFormat: "yyyy",
 	_monthFormat: "yyyy/MM",
-	_dayFormat: "dd",
-	_hourFormat: "hh",
-	_minuteFormat: "mm",
-	_secondFormat: "ss",
-	_millisecondFormat: "SS",
+	_dayFormat: "MM/dd",
+	_hourFormat: "hh:mm",
+	_minuteFormat: "hh:mm",
+	_secondFormat: "hh:mm:ss",
+	_millisecondFormat: "ss.SS",
 	
 	_multiply:5,
 	_dirtyLevel: 4,
@@ -153,6 +50,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_$selectedItem: null,
 	_contentHeight: null,
 	_init: true,	// only use once after initialize
+	_widthPerWord: 20,
 	
 	_year: 0,
 	_month: 1,
@@ -243,33 +141,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				updateFlag[this._steps.updateItemAndFacet] = true;
 			}
 		}
-		
-//		width: function() {
-//			this.$supers(timeline.Timeline, 'width', arguments);
-//			if(this.desktop) {
-//				var updateFlag = this._updateFlag;
-//				updateFlag[this._steps.updateProperties] = true;
-//				updateFlag[this._steps.refeshInside] = true;
-//				updateFlag[this._steps.rebuildFacet] = true;
-//				updateFlag[this._steps.rebuildItem] = true;
-//				updateFlag[this._steps.gotoTime] = true;
-//				updateFlag[this._steps.updateItemAndFacet] = true;
-//			}
-//		},
-//		
-//		height: function() {
-//			this.$supers(timeline.Timeline, 'height', arguments);
-//			if(this.desktop) {
-//				var updateFlag = this._updateFlag;
-//				updateFlag[this._steps.updateProperties] = true;
-//				updateFlag[this._steps.refeshInside] = true;
-//				updateFlag[this._steps.rebuildFacet] = true;
-//				updateFlag[this._steps.rebuildItem] = true;
-//				updateFlag[this._steps.gotoTime] = true;
-//				updateFlag[this._steps.updateItemAndFacet] = true;
-//			}
-//		}
-		
 	},
 	/**
 	 * If you don't like the way in $define ,
@@ -342,17 +213,16 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		jq('.' + this.$s('facet')).remove();
 	},
 	cleanItem: function() {
-		jq('.' + this.$s('item')).remove();
+		console.log('.' + this.$s('content-cave') + ' > *');
+		jq('.' + this.$s('content-cave') + ' > *').remove();
 	},
 	buildFacet: function() {
 		var mainUnitLevel = this._getFacetMainLevel(),
 			largeUnitLevel = mainUnitLevel - 1;
 		
 		this._buildFacet(mainUnitLevel, this.$n('main-facet'));
-		if(largeUnitLevel >= this._year)
-			this._buildFacet(largeUnitLevel, this.$n('large-facet'));
-		
-		this.updateItemPosition();
+		//if(largeUnitLevel >= this._year)
+		//	this._buildFacet(largeUnitLevel, this.$n('large-facet'));
 	},
 	calculateInsideWidth: function() {
 		var period = this._maxDateBound - this._minDateBound,
@@ -369,16 +239,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			out = [],
 			cave = this.$n('content-cave');
 				
+		this._sortItems(items);
+		
 		// find indexBegin and indexEnd to render in boundary
-		items.sort(function(e1, e2) {
-			var startDate1 = e1.startDate,
-				startDate2 = e2.startDate;
-			
-			if(startDate1 == startDate2)
-				return e1.objectId - e2.objectId;
-			else
-				return startDate1 - startDate2;
-		});
 		for(var i=0, length=items.length; i < length; i++) {
 			if(items[i].startDate >= boundary.leftBound) {
 				var item;
@@ -460,28 +323,89 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			bandSize = Math.floor(jq(this.$n('content-cave')).height() / height),
 			bands = [],
 			best = Number.MAX_VALUE,
-			bestIdx = -1;
+			groupIndexes = null,
+			groupIndex = null;
+		
+		this._sortItems(items);
+		groupIndexes = this._buildGroupIndexes(items, bandSize);
+		if(groupIndexes.length > 0) groupIndex = groupIndexes.shift();
 		
 		for(var i = 0; i < bandSize; i++)
 			bands.push([]);
 		
 		for(var i = 0, length = items.length; i < length; i++) {
-			var item = items[i];
+			var item = items[i],
+				startDate = item.startDate;
 			for(var j = 0; j < bandSize; j++) {
 				var band = bands[j],
 					ele = band[band.length - 1],
 					startDate = ele ? ele.startDate : Number.MIN_VALUE;
-				console.log(startDate);
 				if(startDate < best) {
 					best = startDate;
 					bestIdx = j;
 				}
 			}
-			jq('#' + this.uuid + '-item-' + item.objectId).css('top', height * bestIdx + 'px');
-			bands[bestIdx].push(item);
-			best = Number.MAX_VALUE
+			
+			if(groupIndex && i == groupIndex.begin) {
+				var begin = groupIndex.begin,
+					end = groupIndex.end;
+				jq(this._buildItemGroup(items, begin, end, 'top:' + height * bestIdx + 'px;')
+						.join('')).appendTo(this.$n('content-cave'));
+				i+= end - begin;
+				groupIndex = groupIndexes.shift();
+			} else {
+				jq('#' + this.uuid + '-item-' + item.objectId).css('top', height * bestIdx + 'px');
+				bands[bestIdx].push(item);
+				best = Number.MAX_VALUE
+			}
 		}
-		console.log(bands.length, bands);
+	},
+	
+	_buildItemGroup: function(sortedItems, beginIndex, endIndex, style) {
+		console.log('in build..');
+		var out = [];
+		
+		out.push('<div class="' + this.$s('group') + '" style="' + style + '">');
+		for(; beginIndex < endIndex; beginIndex++)
+			this._itemOut(out, sortedItems[beginIndex]);
+		out.push('</div>');
+		
+		return out;
+	},
+	
+	_buildGroupIndexes: function(sortedItems, bandSize) {
+		var arr = [],
+			i = 1,
+			length = sortedItems.length,
+			lastTime = sortedItems[0].startDate,
+			count = 1;
+		
+		for(; i < length; i++) {
+			var item = sortedItems[i],
+				startDate = item.startDate;
+			if(startDate == lastTime)
+				count++;
+			else {
+				if(count > bandSize)
+					arr.push({begin: i - count, end: i});
+				count = 0;
+			}
+			lastTime = startDate;
+		}
+		
+		return arr;
+	},
+	
+	_sortItems: function(items) {
+		items.sort(function(e1, e2) {
+			var startDate1 = e1.startDate,
+				startDate2 = e2.startDate;
+			
+			if(startDate1 == startDate2)
+				return e1.objectId - e2.objectId;
+			else
+				return startDate1 - startDate2;
+		});
 	},
 	
 	_itemOut: function(out, item) {
@@ -525,15 +449,21 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			facet = this._getNextFacet(leftBound, unitLevel, true),
 			format = this._getFormat(unitLevel),
 			calendar = new zk.fmt.Calendar(),
+			formatLength = format.length * this._widthPerWord,
+			prevLeft = 0,
+			currentLength = 0,
 			out = [];
-			
-			console.log(new Date(leftBound), new Date(rightBound));
-			
+						
 		for (; facet < rightBound ; facet = this._getNextFacet(facet, unitLevel)) {
 			var left = this._getPxDistance(minDateBound, facet, pxPerMs);
-			out.push('<div class="' + this.$s('facet') + '" style="left:' 
-					+ left + 'px">' + calendar.formatDate(new Date(facet), format));
-			out.push('</div>');
+			currentLength += left - prevLeft;
+			prevLeft = left;
+			if(currentLength > formatLength) {
+				out.push('<div class="' + this.$s('facet') + '" style="left:' 
+						+ left + 'px">' + calendar.formatDate(new Date(facet), format));
+				out.push('</div>');
+				currentLength = 0;
+			}
 		}
 		
 		if(out.length > 0)
@@ -551,8 +481,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				return i;
 		return this._millisecond;
 	},
-	_getNextFacet: function(startTime, unit, includeSelf) {
-		var facetTime = new Date(startTime),
+	_getNextFacet: function(startDate, unit, includeSelf) {
+		var facetTime = new Date(startDate),
 			facetTimeArr = [];
 		switch(unit + 1) {
 			case 1:
@@ -568,8 +498,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			case 6: 
 				facetTime.setMilliseconds(0);
 		}
-		if(includeSelf && facetTime.getTime() == startTime)
-			return startTime;
+		if(includeSelf && facetTime.getTime() == startDate)
+			return startDate;
 	
 		facetTimeArr = [facetTime.getFullYear(), facetTime.getMonth(), facetTime.getDate(),
 			facetTime.getHours(), facetTime.getMinutes(), facetTime.getSeconds(), facetTime.getMilliseconds()];
@@ -631,6 +561,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			this.cleanItem();
 		}
 		this.renderItem();
+		this.updateItemPosition();
 		this.buildFacet();
 		if(this._realLeftBound < this._processedLeftBound)
 			this._processedLeftBound = this._realLeftBound;
@@ -650,7 +581,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			onSize: this, 
 			onResponse: this
 		});
-		this._slider = new TimelineSlide(this, jq(this.$n()), jq(this.$n('content'))).init(); 
+		this._slider = new (this._timelineScroller(this, jq(this.$n()), jq(this.$n('content')))).init(); 
 		//A example for domListen_ , REMEMBER to do domUnlisten in unbind_.
 		//this.domListen_(this.$n("cave"), "onClick", "_doItemsClick");
 	},
@@ -714,6 +645,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this.calculate();
 	},
 	doClick_: function (evt) {
+		console.log('doClick...');
 		var $target = jq(evt.domTarget); 
 		if($target.hasClass(this.$s('item'))) {
 			var oid = zk.parseInt($target.attr('id').split('-')[2]);
@@ -724,5 +656,106 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			console.log('timeline click');
 //		this.$super('doClick_', evt, true);//the super doClick_ should be called
 //		this.fire('onFoo', {foo: 'myData'});
+	},
+	
+	_timelineScroller: function TimelineScroller(wgt, $dragPane, $target) {
+		var dragging = false,
+			pageX = 0,
+			targetX = 0, 
+			minDistance = 40,
+			friction = 1,
+			target = $target.get(0),
+			$content = jq(wgt.$n('content')),
+			$insideContent = jq(wgt.$n('content-inside')),
+			beginEvent,
+			startTracking = function(event) {
+				var pageX1 = event.pageX,
+					scrollLeft = target.scrollLeft + pageX - pageX1;
+				
+				pageX = pageX1;
+				
+				if(scrollLeft < 0 || scrollLeft + $content.width() > $insideContent.width())
+					return;
+				
+				target.scrollLeft = scrollLeft;
+			},
+			stopTracking = function(event) {
+				$dragPane.unbind('mousemove');
+				dragging = false;
+				doMomentum(beginEvent, event);
+				beginEvent = null;
+			},
+			doMomentum = function(event1, event2) {
+				if(!(event1 && event2)) return;
+				var x1 = event1.pageX,
+					t1 = event1.timeStamp,
+					x2 = event2.pageX,
+					t2 = event2.timeStamp,
+
+					// Deltas
+					dX = x2 - x1,
+					dMs = Math.max(t2 - t1, 1),
+
+					// Speeds
+					speedX = -Math.max(Math.min(dX/dMs, 1), -1),
+
+					// Distance moved (Euclidean distance)
+					distance = Math.pow(x1-x2, 2);
+				if (distance > minDistance) {
+					// Momentum
+					var lastStepTime = new Date(),
+						limitStep = 100,
+						lastLeft = -1,
+						currentStep = limitStep,
+						interval = setInterval(function(){
+							if(currentStep -- == 0) {
+								clearInterval(interval);
+								wgt._onScroll.apply(wgt, event2);
+								return;
+							}
+							speedX *= (currentStep / 100);
+
+							var now = new Date(),
+								stepDuration = now.getTime() - lastStepTime.getTime(),
+								newLeft = (target.scrollLeft + (speedX * stepDuration / friction));
+
+							//console.log(newLeft, target.scrollLeft, speedX, currentStep);
+
+							lastStepTime = now;
+							if(newLeft < 0) 
+								newLeft = 0;
+							else if(newLeft + $content.width() > $insideContent.width()) {
+								newLeft = $insideContent.width() - $content.width();
+							}
+							
+							if(lastLeft != newLeft)
+								target.scrollLeft = lastLeft = newLeft
+						}, Math.abs(speedX) * 2000 / 100);
+				}
+			};
+
+		return {
+			init: function() {
+				$dragPane.bind('mousedown', function(event) {
+					if(!dragging) {
+						beginEvent = event;
+						dragging = true;
+						pageX = event.pageX;
+						targetX = $target.offset().left;
+						$dragPane.bind('mousemove', startTracking);
+					}
+					event.preventDefault();
+				}).bind('mouseup', stopTracking).bind('mouseleave', function(event) {
+					event.preventDefault();
+					if(dragging)
+						stopTracking(event);
+				});
+				return this;
+			},
+			destroy: function() {
+				$dragPane.unbind('mousedown mouseup mouseleave');
+				return this;
+			}
+		};
 	}
 });
