@@ -3,7 +3,7 @@
 		Date d = new Date();
 	]]></zscript>
  	<window id="win" title="Hello World!!" border="normal">
-		<timeline id="myComp" pivot="${d}" height="250px" onItemSelect='item = event.getSelectedItem()' onTest=""/>
+		<timeline id="myComp" pivot="${d}" height="230px" onItemSelect='item = event.getSelectedItem()' onTest=""/>
 		<zscript><![CDATA[
 			import org.zkoss.zk.timeline.*;
 			java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
@@ -56,11 +56,11 @@
 //			myComp.addTimelineItem(e3);
 		                  
 			public void plus(){
-				myComp.setPeriod(myComp.getPeriod() + Math.round(myComp.getPeriod() * 0.3));
+				myComp.setPeriod(myComp.getPeriod() + Math.round(myComp.getPeriod() * 0.7));
 			}
 			
 			public void minus(){
-				myComp.setPeriod(myComp.getPeriod() - Math.round(myComp.getPeriod() * 0.3));
+				myComp.setPeriod(myComp.getPeriod() - Math.round(myComp.getPeriod() * 0.7));
 			}
 			
 			public void addEvent() {

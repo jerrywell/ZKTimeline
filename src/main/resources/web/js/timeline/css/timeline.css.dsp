@@ -36,6 +36,7 @@
 
 .z-timeline .z-timeline-facet{
 	position: absolute;
+	z-index: 100px;
 }
 
 .z-timeline .z-timeline-main-facet .z-timeline-facet{
@@ -58,14 +59,6 @@
 }
 
 
-
-.z-timeline .z-timeline-main-facet .z-timeline-fbg{
-	background-image: url(${c:encodeThemeURL('~./zul/img/timeline/small-facet.png')});
-	background-repeat:repeat-y;
-	height: 10px;
-}
-
-
 .z-timeline .z-timeline-item{
 	height: 40px;
 	width: 140px;
@@ -82,8 +75,37 @@
 	line-height: 11px;
 	color: #999;
 	margin-bottom: 2px;
-	
 	padding: 5px;
+	z-index: 10;
+}
+
+.z-timeline .z-timeline-item-up, .z-timeline .z-timeline-item-down{
+	height: 20px;
+	width: 140px;
+	position: absolute;
+	cursor: pointer;
+	z-index: 5;
+	background-color: #EFEFEF;
+}
+
+.z-timeline .z-timeline-item-up::before{
+	content: "\f0d8";
+	box-sizing: border-box;
+	display: inline-block;
+	speak: none;
+	font-family: FontAwesome;
+	width: 100%;
+	text-align: center;
+}
+
+.z-timeline .z-timeline-item-down::before{
+	content: "\f0d7";
+	box-sizing: border-box;
+	display: inline-block;
+	speak: none;
+	font-family: FontAwesome;
+	width: 100%;
+	text-align: center;
 }
 
 <c:if test="${!c:browser('ios') && !c:browser('android')}">

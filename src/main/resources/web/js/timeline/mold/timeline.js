@@ -23,7 +23,7 @@ function (out) {
 				out.push('</div>');	
 				out.push('<div class="', zcls, '-small-facet" id="', uuid, '-small-facet"></div>');
 				out.push('<div class="', zcls, '-main-facet" id="', uuid, '-main-facet"></div>');
-				out.push('<div class="', zcls, '-large-facet" id="', uuid, '-large-facet"></div>');
+//				out.push('<div class="', zcls, '-large-facet" id="', uuid, '-large-facet"></div>');
 			out.push('</div>');
 		out.push('</div>');
 		
