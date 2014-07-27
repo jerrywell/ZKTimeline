@@ -39,6 +39,7 @@
 				TimelineItem ee = new TimelineItem();
 				ee.setTitle("e1");
 				ee.setStartDate(d);
+				ee.setStopDate(new Date(d.getTime() + 1000 * 60 * 60 * 30));
 				myComp.addTimelineItem(ee);
 			}
 //			TimelineItem e1 = new TimelineItem();
