@@ -51,6 +51,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_contentHeight: null,
 	_init: true,	// only use once after initialize
 	_widthPerWord: 20,
+	_itemHeight: 50,
 	
 	_year: 0,
 	_month: 1,
@@ -237,16 +238,21 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			realRightBound = boundary.rightBound,
 			items = this._timelineItems,
 			out = [],
-			cave = this.$n('content-cave');
-				
+			cave = this.$n('content-cave'),
+			minDateBound = this._minDateBound,
+			pxPerMs = this._pxPerMs;
+			
 		this._sortItems(items);
 		
 		// find indexBegin and indexEnd to render in boundary
 		for(var i=0, length=items.length; i < length; i++) {
 			if(items[i].startDate >= boundary.leftBound) {
 				var item;
-				while((item = items[i++]) && item.startDate <= boundary.rightBound)
-					this._itemOut(out, item);
+				console.log('test');
+				while((item = items[i++]) && item.startDate <= boundary.rightBound) {
+					this._itemOut(out, item, 
+						'left:' + this._getPxDistance(minDateBound, item.startDate, pxPerMs) + 'px');
+				}
 				break;
 			}
 		}
@@ -256,6 +262,23 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		return out;
 	},
+	
+	updateItemGroup: function(itemIds) {
+		var groupIndexes = null,
+			groupIndex = null,
+			items = this._timelineItems;
+		
+		this._sortItems(items);
+		groupIndexes = this._buildGroupIndexes(
+				items, Math.floor(jq(this.$n('content-cave')).height() / jq('.' + this.$s('item')).eq(0).height()));
+		if(groupIndexes.length > 0) groupIndex = groupIndexes.shift();
+		
+		while(groupIndex) {
+			this._buildItemGroup(items, groupIndex.begin, groupIndex.end);
+			groupIndex = groupIndexes.shift();
+		}
+	},
+	
 	handleItemsUpdate: function() {
 		var addedQueue = this._addedItemQueue,
 			removedQueue = this._removedItemQueue,
@@ -266,13 +289,16 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			length = addedQueue.length,
 			item,
 			out = [],
-			cacheMap = {};
+			cacheMap = {},
+			minDateBound = this._minDateBound,
+			pxPerMs = this._pxPerMs;
 		
 		for(;i < length; i++) {
 			item = addedQueue[i];
 			console.log('generate item update...');
 			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound)
-				this._itemOut(out, item);
+				this._itemOut(out, item, 
+					'left:' + this._getPxDistance(minDateBound, itemStartDate, pxPerMs) + 'px');
 			items.push(item);
 		}
 		
@@ -322,13 +348,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			height = jq('.' + this.$s('item')).eq(0).outerHeight(),
 			bandSize = Math.floor(jq(this.$n('content-cave')).height() / height),
 			bands = [],
-			best = Number.MAX_VALUE,
-			groupIndexes = null,
-			groupIndex = null;
+			best = Number.MAX_VALUE;
 		
 		this._sortItems(items);
-		groupIndexes = this._buildGroupIndexes(items, bandSize);
-		if(groupIndexes.length > 0) groupIndex = groupIndexes.shift();
 		
 		for(var i = 0; i < bandSize; i++)
 			bands.push([]);
@@ -346,31 +368,17 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				}
 			}
 			
-			if(groupIndex && i == groupIndex.begin) {
-				var begin = groupIndex.begin,
-					end = groupIndex.end;
-				jq(this._buildItemGroup(items, begin, end, 'top:' + height * bestIdx + 'px;')
-						.join('')).appendTo(this.$n('content-cave'));
-				i+= end - begin;
-				groupIndex = groupIndexes.shift();
-			} else {
-				jq('#' + this.uuid + '-item-' + item.objectId).css('top', height * bestIdx + 'px');
-				bands[bestIdx].push(item);
-				best = Number.MAX_VALUE
-			}
+			jq('#' + this.uuid + '-item-' + item.objectId).css('top', height * bestIdx + 'px');
+			bands[bestIdx].push(item);
+			best = Number.MAX_VALUE
 		}
 	},
 	
-	_buildItemGroup: function(sortedItems, beginIndex, endIndex, style) {
-		console.log('in build..');
-		var out = [];
-		
-		out.push('<div class="' + this.$s('group') + '" style="' + style + '">');
+	_buildItemGroup: function(sortedItems, beginIndex, endIndex) {
+		var parent = jq('<div class="' + this.$s('group') + '"></div>');
 		for(; beginIndex < endIndex; beginIndex++)
-			this._itemOut(out, sortedItems[beginIndex]);
-		out.push('</div>');
-		
-		return out;
+			jq('#' + this.uuid + '-item-' + sortdItems[beginIndex].objectId).detache().appendTo(parent);
+		parent.appendTo(jq('.' + this.$n('content-cave')));
 	},
 	
 	_buildGroupIndexes: function(sortedItems, bandSize) {
@@ -408,11 +416,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		});
 	},
 	
-	_itemOut: function(out, item) {
-		var left = this._getPxDistance(this._minDateBound, item.startDate, this._pxPerMs);
-		out.push('<div id="' + this.uuid + '-item-' + item.objectId 
-				+ '" class="' + this.$s('item') + '" style="left:');
-		out.push(left + 'px">' + item.title + '</div>')
+	_itemOut: function(out, item, style) {
+		out.push('<div id="' + this.uuid + '-item-' + item.objectId + '" class="' + this.$s('item') + '"'); 
+		if(style)
+			out.push(' style="' + style + '"');
+		out.push('>' + item.title + '</div>')
 	},
 	_refreshProperties: function(pivot) {
 		var pxPerMs = this._pxPerMs = jq(this).width() / this._period,
