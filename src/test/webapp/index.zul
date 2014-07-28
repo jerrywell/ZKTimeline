@@ -1,9 +1,11 @@
 <zk>
 	<zscript><![CDATA[
 		Date d = new Date();
+		org.zkoss.zk.timeline.TimelineItem item;
 	]]></zscript>
  	<window id="win" title="Hello World!!" border="normal">
-		<timeline id="myComp" pivot="${d}" height="230px" onItemSelect='item = event.getSelectedItem()' onTest=""/>
+		<timeline id="myComp" pivot="${d}" height="230px" onItemSelect='setSelectedItem(event.getSelectedItem())' onTest=""
+			onPeriodSelect='setDate(event)'/>
 		<zscript><![CDATA[
 			import org.zkoss.zk.timeline.*;
 			java.text.SimpleDateFormat formater = new java.text.SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
@@ -37,24 +39,13 @@
 			for(int i = 0; i < 100; i++) {
 				d = new Date(d.getTime() + 1000 * 60 * 60 * 24);
 				TimelineItem ee = new TimelineItem();
-				ee.setTitle("e1");
+				ee.setTitle("e0" + i);
 				ee.setStartDate(d);
 				ee.setStopDate(new Date(d.getTime() + 1000 * 60 * 60 * 30));
 				myComp.addTimelineItem(ee);
 			}
-//			TimelineItem e1 = new TimelineItem();
-//			e1.setTitle("e1");
-//			e1.setStartDate(formater.parse("2015/9/22 11:11:11"));
-//			e1.setStopDate(new Date());
-//			TimelineItem e2 = new TimelineItem();
-//			e2.setTitle("e2");
-//			e2.setStartDate(formater.parse("2014/10/23 11:11:11"));
-//			TimelineItem e3 = new TimelineItem();
-//			e3.setTitle("e3");
-//			e3.setStartDate(formater.parse("2015/11/21 11:11:11"));
-//			myComp.addTimelineItem(e1);
-//			myComp.addTimelineItem(e2);
-//			myComp.addTimelineItem(e3);
+			
+			//myComp.setSelectedItem(ee);
 		                  
 			public void plus(){
 				myComp.setPeriod(myComp.getPeriod() + Math.round(myComp.getPeriod() * 0.7));
@@ -80,6 +71,22 @@
 			public void removeSeletedItem(TimelineItem item) {
 				myComp.removeTimelineItem(item);
 			}
+			
+			public void setSelectedItem(TimelineItem item) {
+				this.item = item;
+				stitle.setValue(item.getTitle());
+				sstartDate.setValue(item.getStartDate());
+				sstopDate.setValue(item.getStopDate());
+			}
+			
+			public void setDate(Timeline.TimelineEvent event) {
+				startDate.setValue(event.getStartDate());
+				stopDate.setValue(event.getStopDate());
+			}
+			
+			public void removeSelectedItem() {
+				myComp.removeTimelineItem(this.item);
+			}
 	
 		]]></zscript>
 		<button label="plus" onClick="plus()"></button>
@@ -93,6 +100,11 @@
 		stopDate: <datebox id="pivot"/>
 		<button label="add pivot" onClick="setPivot()"/>
 		<separator/>
-		<button label="remove selected item" onClick="removeSeletedItem(item)"/>
+		<separator/>
+		objectid: <label id="soid"/>
+		title: <textbox id="stitle"/>
+		startDate: <datebox id="sstartDate"/>
+		stopDate: <datebox id="sstopDate"/>
+		<button label="remove selected item" onClick="removeSelectedItem()"/>
 	</window>
 </zk>

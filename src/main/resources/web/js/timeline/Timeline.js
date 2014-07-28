@@ -33,9 +33,9 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 	_minuteFormat: "hh:mm",
 	_secondFormat: "hh:mm:ss",
 	_millisecondFormat: "ss.SS",
+	_selectedItem: null,
 	
 	_multiply:5,
-	_dirtyLevel: 4,
 	_realLeftBound: -1,
 	_realRightBound: -1,
 	_itemsIndexBegin: -1,
@@ -151,6 +151,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				updateFlag[this._steps.gotoTime] = true;
 				updateFlag[this._steps.updateItemAndFacet] = true;
 			}
+		},
+
+		selectedItem: function() {
+			this._selectItem(this._selectedItem);
 		}
 	},
 	/**
@@ -208,6 +212,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				this._processedLeftBound = this._realRightBound;
 				this._processedRightBound = this._realLeftBound;
 				this._updateItemAndFacet(true);
+				if(this._selectedItem) this._selectItem(this._selectedItem);
 			}
 			
 			if(updateFlag[this._steps.updateItemAndFacet]) {
@@ -257,7 +262,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		for(var i=0, length=items.length; i < length; i++) {
 			if(items[i].startDate >= boundary.leftBound) {
 				var item;
-				console.log('test');
 				while((item = items[i++]) && item.startDate <= boundary.rightBound) {
 					var left = 'left:' + this._getPxDistance(minDateBound, item.startDate, pxPerMs) + 'px;';
 					this._itemOut(out, item, left);
@@ -270,10 +274,8 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		if(cave && out.length > 0)
 			jq(cave).append(out.join(''));
-		if(periodCave && periodOut.length > 0) {
-			console.log(periodOut.join(''));
+		if(periodCave && periodOut.length > 0)
 			jq(periodCave).append(periodOut.join(''));
-		}
 		
 		return out;
 	},
@@ -310,25 +312,21 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		
 		for(;i < length; i++) {
 			item = addedQueue[i];
-			console.log('generate item update...');
 			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound)
 				this._itemOut(out, item, 
-					'left:' + this._getPxDistance(minDateBound, itemStartDate, pxPerMs) + 'px');
+					'left:' + this._getPxDistance(minDateBound, item.startDate, pxPerMs) + 'px');
 			items.push(item);
 		}
 		
 		for(i = 0, length = removedQueue.length; i < length; i++) {
 			item = removedQueue[i];
-			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound) {
-				console.log('#' + this.uuid + '-item-' + item.objectId);
+			if(item.startDate >= processedLeftBound && item.startDate <= processedRightBound)
 				jq('#' + this.uuid + '-item-' + item.objectId).remove();
-			}
 			cacheMap[item.objectId] = true;
 		}
 		
 		for(i = items.length - 1; i--;) {
 			item = items[i];
-			console.log(item, i);
 			if(cacheMap[item.objectId])
 				items.splice(i, 1);
 		}
@@ -393,7 +391,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 						doms = [],
 						$sample = jq('#' + this.uuid + '-item-' + item.objectId), 
 						left = $sample.css('left'),
-						$up = jq('<div class="' + this.$s('item-up') 
+						$up = jq('<div class="' + this.$s('item-up') + ' ' + this.$s('group-disabled')
 								+ '" style="left:' + left + ';top:0px"></div>')
 								.appendTo($cave),
 						arrowHeight = $up.height(),
@@ -524,9 +522,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			mRightBound = rightBound + (period * (multiply - 1)),
 			facetHeight = jq(this.$n('main-facet')).height() 
 				+ jq(this.$n('small-facet')).height() + jq(this.$n('large-facet')).height();
-		
-//		console.log(new Date(leftBound), new Date(rightBound), new Date(mLeftBound), new Date(mRightBound));
-		
+				
 		jq(this.$n('content-cave')).height(jq(this).height() - facetHeight);
 		this._realLeftBound = mLeftBound < minDateBound ? minDateBound : mLeftBound;
 		this._realRightBound = mRightBound > maxDateBound ? maxDateBound : mRightBound;
@@ -631,15 +627,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			if(item.objectId == oid)
 				return item;
 	},
-	_selectItem: function($item, oid) {
+	_selectItem: function(item, $item) {
 		var $prev = this._$selectedItem,
-			selectedClass = this.$s('selected');
+			selectedClass = this.$s('selected'),
+			oid = item.objectId;
 		
+		if(!$item) $item = jq('#' + this.uuid + '-item-' + oid);
 		this._$selectedItem = $item;
 		if($prev) {
-			$prev.removeClass(selectedClass);
 			jq('#' + $prev.attr('id').replace('item', 'item-period')).removeClass(selectedClass);
+			$prev.removeClass(selectedClass);
 		}
+		
 		$item.addClass(selectedClass);
 		jq('#' + this.uuid + '-item-period-' + oid).addClass(selectedClass);
 	},
@@ -650,9 +649,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			processedRightBound = this._processedRightBound,
 			leftBound = realLeftBound < processedLeftBound ? realLeftBound : processedRightBound,
 			rightBound = realRightBound > processedRightBound ? realRightBound : processedLeftBound;
-		
-		console.log(realLeftBound, realRightBound, processedLeftBound, processedRightBound);
-			
+					
 		return {
 			leftBound: leftBound,
 			rightBound: rightBound
@@ -684,7 +681,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this.domListen_(this.$n("main-facet"), "onMouseDown", "_onDateSelectStart");
 		this.domListen_(this.$n("main-facet"), "onMouseUp", "_onDateSelectStop");
 		this.domListen_(this.$n("main-facet"), "onMouseMove", "_onDateSelectMove");
-		this.domListen_(this.$n("main-facet"), "onMouseOut", "_onDateSelectOut");
+		this.domListen_(this.$n("main-facet"), "onMouseLeave", "_onDateSelectOut");
 		zWatch.listen({
 			onSize: this, 
 			onResponse: this
@@ -715,7 +712,7 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			onSize: this, 
 			onResponse: this
 		});
-		this.domUnlisten_(this.$n("main-facet"), "onMouseOut", "_onDateSelectOut");
+		this.domUnlisten_(this.$n("main-facet"), "onMouseLeave", "_onDateSelectOut");
 		this.domUnlisten_(this.$n("main-facet"), "onMouseMove", "_onDateSelectMove");
 		this.domUnlisten_(this.$n("main-facet"), "onMouseUp", "_onDateSelectStop");
 		this.domUnlisten_(this.$n("main-facet"), "onMouseDown", "_onDateSelectStart");
@@ -727,12 +724,10 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		please refer to http://books.zkoss.org/wiki/ZK%20Client-side%20Reference/Notifications
 	 */
 	_onScroll: function(evt) {
-		console.log('in onScroll...');
 		var updateFlag = this._updateFlag;
 		updateFlag[this._steps.updatePropertiesWithoutPivot] = true;
 		updateFlag[this._steps.updateItemAndFacet] = true;
 		this.calculate();
-		console.log('end onScroll');
 	},
 	_onScrolling: function(evt) {
 		//console.log('in scrolling...');
@@ -741,7 +736,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		var states = this._dateSelStates,
 			state = this._dateSelState,
 			pageX = event.pageX;
-		console.log('test...', state);
 		if(state == states.nothing) {
 			var offsetX = pageX - jq(event.target).offset().left + this.$n('content').scrollLeft;
 			this._leftCursor = jq('<div class="' + this.$s('left-cursor') + '" style="left:' + 
@@ -756,15 +750,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		} else if (state == states.start) {
 			var val = this._selPrevX - pageX,
 				width = this._selWidth - val;
-			console.log(width);
-			this._leftCursor.style.width = (width < 0 ? 0 : width) + 'px';
+			
+			if(width < 0)
+				this._leftCursor.style.left = (this._selX - val) + 'px';
+			
+			this._leftCursor.style.width = Math.abs(width) + 'px';
 		}
 	},
-	_onDateSelectOut: function(event) {
+	_onDateSelectOut: function(event, removeAll) {
 		var states = this._dateSelStates,
 			state = this._dateSelState;
-	
-		if(state == states.stop) {
+			
+		if(removeAll || state != states.stop) {
 			this._dateSelState = states.nothing;
 			this._leftCursor.style.width = 0 + 'px';
 			this._selX = this._selPrevX = this._selWidth = 0;
@@ -776,12 +773,17 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		var states = this._dateSelStates,
 			state = this._dateSelState;
 		
-		console.log('in mouse down...');
+		if(state == states.stop) {
+			this._onDateSelectOut(event, true);
+			this._onDateSelectMove(event);
+			state = this._dateSelState;
+		}
 		
 		if(state == states.moveIn) {
 			this._dateSelState = states.start;
 			this._leftCursor.style.width = this._selWidth + 'px';
 		}
+			
 		
 		event.domEvent.preventDefault();
 		event.domEvent.stopPropagation();
@@ -791,8 +793,14 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		var states = this._dateSelStates,
 			state = this._dateSelState;
 		
-		if(state == states.start)
+		if(state == states.start) {
 			this._dateSelState = states.stop;
+			
+			var startTime = Math.round(zk.parseInt(this._leftCursor.style.left) / this._pxPerMs),
+				stopTime = Math.round(zk.parseInt(this._leftCursor.style.width) / this._pxPerMs) + startTime;
+			
+			this.fire('onPeriodSelect', {startTime: startTime, stopTime: stopTime});
+		}
 		
 		event.domEvent.preventDefault();
 		event.domEvent.stopPropagation();
@@ -822,19 +830,20 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		for(var i = 0; $dom = doms[i++];)
 			$dom.removeClass(className);
 	},
-	_onItemUp: function(event) {
-		var $up = jq(event.target),
-			$down = $up.data('down'),
+	_onItemDown: function(event) {
+		var $down = jq(event.target),
+			$up = $down.data('up'),
 			first = $up.data('first'),
 			last = $up.data('last'),
-			doms = $up.data('doms');
+			doms = $up.data('doms'),
+			length = doms.length;
 		
-		if(last == doms.length)
+		if(last == length)
 			return;
 
 		var height = this._addItemMargin(doms[0].outerHeight());
 		first++; last++;
-		for(var i = 0, length = doms.length; i < length; i++) {
+		for(var i = 0; i < length; i++) {
 			var $dom = doms[i];
 			$dom.css('top', jq.px(zk.parseInt($dom.css('top')) - height));
 			if(i == first - 1)
@@ -843,24 +852,30 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 				$dom.show();
 		}
 		
+		if(last == length) 
+			$down.addClass(this.$s('group-disabled'));
+		if(first > 0)
+			$up.removeClass(this.$s('group-disabled'));
+		
 		$up.data({
 			'first': first,
 			'last': last
 		});
 	},
-	_onItemDown: function(event) {
-		var $down = jq(event.target),
-			$up = $down.data('up'),
+	_onItemUp: function(event) {
+		var $up = jq(event.target),
+			$down = $up.data('down'),
 			first = $up.data('first'),
 			last = $up.data('last'),
-			doms = $up.data('doms');
+			doms = $up.data('doms'),
+			length = doms.length;
 		
 		if(first == 0)
 			return;
 	
 		var height = this._addItemMargin(doms[0].outerHeight());
 		first--; last--;
-		for(var i = 0, length = doms.length; i < length; i++) {
+		for(var i = 0; i < length; i++) {
 			var $dom = doms[i];
 			$dom.css('top', jq.px(zk.parseInt($dom.css('top')) + height));
 			if(i == first)
@@ -868,6 +883,11 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			else if(i == last)
 				$dom.hide();
 		}
+		
+		if(last < length) 
+			$down.removeClass(this.$s('group-disabled'));
+		if(first == 0)
+			$up.addClass(this.$s('group-disabled'));
 		
 		$up.data({
 			'first': first,
@@ -894,17 +914,18 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 		this.calculate();
 	},
 	doClick_: function (evt) {
-		console.log('doClick...');
-		var $target = jq(evt.domTarget); 
+		var $target = jq(evt.domTarget);
+		
 		if($target.hasClass(this.$s('item'))) {
-			var oid = zk.parseInt($target.attr('id').split('-')[2]);
+			var oid = zk.parseInt($target.attr('id').split('-')[2]),
+				items = this._timelineItems,
+				item = this._selectedItem = this._getItemByObjectId(oid);
+			
 			this.fire('onItemSelect', {objectId: oid});
-			this._selectItem($target, oid);
-			this.gotoTime(this._pivot = this._getItemByObjectId(oid).startDate);
-		} else
-			console.log('timeline click');
-//		this.$super('doClick_', evt, true);//the super doClick_ should be called
-//		this.fire('onFoo', {foo: 'myData'});
+			this._selectItem(item, $target);
+			this.gotoTime(this._pivot = item.startDate);
+		}
+		this.$super('doClick_', evt, true);//the super doClick_ should be called
 	},
 	
 	_timelineScroller: function TimelineScroller(wgt, $dragPane, $target) {
@@ -991,7 +1012,6 @@ timeline.Timeline = zk.$extends(zul.Widget, {
 			init: function() {
 				$dragPane.bind('mousedown', function(event) {
 					if(!dragging) {
-						console.log('mouseDown...');
 						beginEvent = event;
 						dragging = true;
 						pageX = event.pageX;

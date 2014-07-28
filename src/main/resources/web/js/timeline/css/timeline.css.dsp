@@ -22,18 +22,18 @@
 }
 
 .z-timeline .z-timeline-item-period{
-	border-left: 10px solid rgb(72,151,241);
+	border-left: 10px solid rgb(110, 174, 245);
 	height: 10px;
 	width: 0px;
 	position: absolute;
-	background-color: rgb(96, 125, 241);
-	filter: alpha(opacity=30);
-	opacity: 0.3;
+	background-color: rgb(181, 195, 251);
+	z-index: 50;
 }
 
 .z-timeline .z-timeline-item-period.z-timeline-selected{
-	filter: alpha(opacity=100);
-	opacity: 1;
+	border-left: 10px solid rgb(72,151,241);
+	background-color: rgb(96, 125, 241);
+	z-index: 100;
 }
 
 .z-timeline .z-timeline-small-facet{
@@ -112,6 +112,10 @@
 	cursor: pointer;
 	z-index: 5;
 	background-color: #EFEFEF;
+}
+
+.z-timeline .z-timeline-group-disabled{
+	color: rgb(193, 193, 193);
 }
 
 .z-timeline .z-timeline-group-hover {

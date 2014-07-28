@@ -22,6 +22,7 @@ public class Timeline extends XulElement {
 	private static final long serialVersionUID = 1L;
 	static {
 		addClientEvent(Timeline.class, "onItemSelect", CE_IMPORTANT);
+		addClientEvent(Timeline.class, "onPeriodSelect", CE_IMPORTANT);
 		addClientEvent(Timeline.class, "onTest", CE_IMPORTANT);
 	}
 	
@@ -35,6 +36,7 @@ public class Timeline extends XulElement {
 	// 7 * 24 * 60 * 60 * 1000, 7 days in unit millisecond
 	private long _period = 604800000L/7 * 180;
 	private List<TimelineItem> _timelineItems;
+	private TimelineItem _selectedItem;
 	
 	/*
 	 * about timeline event
@@ -42,12 +44,12 @@ public class Timeline extends XulElement {
 	private int _eventObjectId = 0;
 	
 	private String _yearFormat = "yyyy";
-	private String _monthFormat = "MM";
-	private String _dayFormat = "dd";
-	private String _hourFormat = "hh";
+	private String _monthFormat = "yyyy/MM";
+	private String _dayFormat = "MM/dd";
+	private String _hourFormat = "hh:mm";
 	private String _minuteFormat = "hh:mm";
-	private String _secondFormat = "ss";
-	private String _millisecondFormat = "SS";
+	private String _secondFormat = "hh:mm:ss";
+	private String _millisecondFormat = "ss.SS";
 	
 	public Timeline(){
 		SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
@@ -92,7 +94,7 @@ public class Timeline extends XulElement {
 	}
 
 	public void setPivot(Date pivot) {
-		this._pivot = pivot.getTime();
+		_pivot = pivot.getTime();
 		smartUpdate("pivot", _pivot);
 	}
 
@@ -102,7 +104,7 @@ public class Timeline extends XulElement {
 
 	public void setPeriod(long period) {
 		if(!Objects.equals(_period, period)){	
-			this._period = period;
+			_period = period;
 			smartUpdate("period", _period);
 		}
 	}
@@ -113,7 +115,7 @@ public class Timeline extends XulElement {
 
 	public void setYearFormat(String yearFormat) {
 		if(!Objects.equals(_yearFormat, yearFormat)){	
-			this._yearFormat = yearFormat;
+			_yearFormat = yearFormat;
 			smartUpdate("yearFormat", _yearFormat);
 		}
 	}
@@ -124,7 +126,7 @@ public class Timeline extends XulElement {
 
 	public void setMonthFormat(String monthFormat) {
 		if(!Objects.equals(_monthFormat, monthFormat)){	
-			this._monthFormat = monthFormat;
+			_monthFormat = monthFormat;
 			smartUpdate("monthFormat", _monthFormat);
 		}
 	}
@@ -135,7 +137,7 @@ public class Timeline extends XulElement {
 
 	public void setDayFormat(String dayFormat) {
 		if(!Objects.equals(_dayFormat, dayFormat)){	
-			this._dayFormat = dayFormat;
+			_dayFormat = dayFormat;
 			smartUpdate("dayFormat", _dayFormat);
 		}
 	}
@@ -146,7 +148,7 @@ public class Timeline extends XulElement {
 
 	public void setHourFormat(String hourFormat) {
 		if(!Objects.equals(_hourFormat, hourFormat)){	
-			this._hourFormat = hourFormat;
+			_hourFormat = hourFormat;
 			smartUpdate("hourFormat", _hourFormat);
 		}
 	}
@@ -157,7 +159,7 @@ public class Timeline extends XulElement {
 
 	public void setMinuteFormat(String minuteFormat) {
 		if(!Objects.equals(_minuteFormat, minuteFormat)){	
-			this._minuteFormat = minuteFormat;
+			_minuteFormat = minuteFormat;
 			smartUpdate("minuteFormat", _minuteFormat);
 		}
 	}
@@ -168,7 +170,7 @@ public class Timeline extends XulElement {
 
 	public void setSecondFormat(String secondFormat) {
 		if(!Objects.equals(_secondFormat, secondFormat)){	
-			this._secondFormat = secondFormat;
+			_secondFormat = secondFormat;
 			smartUpdate("secondFormat", _secondFormat);
 		}
 	}
@@ -176,12 +178,24 @@ public class Timeline extends XulElement {
 	public String getmillisecondFormat() {
 		return _millisecondFormat;
 	}
-
+	
 	public void setMillisecondFormat(String millisecondFormat) {
 		if(!Objects.equals(_millisecondFormat, millisecondFormat)){	
-			this._millisecondFormat = millisecondFormat;
+			_millisecondFormat = millisecondFormat;
 			smartUpdate("millisecondFormat", _millisecondFormat);
 		}
+	}
+	
+	public void setSelectedItem(TimelineItem item) {
+		if(!Objects.equals(_selectedItem, item)){	
+			_selectedItem = item;
+			setPivot(item.getStartDate());
+			smartUpdate("_selectedItem", item);
+		}
+	}
+	
+	public TimelineItem getSelectedItem() {
+		return _selectedItem;
 	}
 
 	/*
@@ -218,6 +232,9 @@ public class Timeline extends XulElement {
 		
 		render(renderer, "pivot", _pivot);
 		
+		if(_selectedItem != null)
+			render(renderer, "selectedItem", _selectedItem);
+		
 		if(_timelineItems.size() != 0)
 			render(renderer, "timelineItems", _timelineItems);
 		
@@ -245,17 +262,24 @@ public class Timeline extends XulElement {
 				}
 			}
 			Events.postEvent(event);
-			System.out.println("do onItemSelect, data:" + event);
 		} else if (cmd.equals("onTest")) {
-//			final int test = (Integer) data.get("test1");
 			System.out.println("do onTest, data:" + data.get("test1") + ", " +data.get("test2") + ", " + data.get("test3") + ", " + data.get("test4"));
-		} else
+		} else if (cmd.equals("onPeriodSelect")) {
+			final long startTime = (Long) data.get("startTime");
+			final long stopTime = (Long) data.get("stopTime");
+			TimelineEvent event = new TimelineEvent("onPeriodSelect", this);
+			event.setStartTime(startTime);
+			event.setStopTime(stopTime);
+			Events.postEvent(event);
+		}else
 			super.service(request, everError);
 	}
 	
 	public class TimelineEvent extends Event{
 		private static final long serialVersionUID = 1L;
 		private TimelineItem selectedItem;
+		private long startTime;
+		private long stopTime;
 
 		public TimelineEvent(String name) {
 			super(name);
@@ -269,8 +293,32 @@ public class Timeline extends XulElement {
 			return selectedItem;
 		}
 
-		public void setSelectedItem(TimelineItem selectedItem) {
+		void setSelectedItem(TimelineItem selectedItem) {
 			this.selectedItem = selectedItem;
+		}
+		
+		public long getStartTime() {
+			return startTime;
+		}
+
+		void setStartTime(long startTime) {
+			this.startTime = startTime;
+		}
+
+		public long getStopTime() {
+			return stopTime;
+		}
+
+		void setStopTime(long stopTime) {
+			this.stopTime = stopTime;
+		}
+		
+		public Date getStartDate() {
+			return new Date(startTime);
+		}
+		
+		public Date getStopDate() {
+			return new Date(stopTime);
 		}
 	}
 
