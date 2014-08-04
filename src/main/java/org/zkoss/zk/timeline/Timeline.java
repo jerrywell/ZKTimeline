@@ -3,12 +3,26 @@ package org.zkoss.zk.timeline;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.TimeZone;
 
+import org.zkoss.calendar.Calendars;
+import org.zkoss.calendar.api.CalendarEvent;
+import org.zkoss.calendar.api.CalendarModel;
+import org.zkoss.calendar.api.DateFormatter;
+import org.zkoss.calendar.event.CalendarDataEvent;
+import org.zkoss.calendar.event.CalendarDataListener;
+import org.zkoss.calendar.impl.Util;
+import org.zkoss.json.JSONObject;
 import org.zkoss.lang.Objects;
+import org.zkoss.util.Locales;
 import org.zkoss.zk.au.AuRequest;
+import org.zkoss.zk.au.out.AuSetAttribute;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.event.Event;
 import org.zkoss.zk.ui.event.Events;
@@ -20,6 +34,11 @@ public class Timeline extends XulElement {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static final String ATTR_ON_ADD_EVENT_RESPONSE = "org.zkoss.calendar.Calendars.onAddEventResponse";
+	private static final String ATTR_ON_REMOVE_EVENT_RESPONSE = "org.zkoss.calendar.Calendars.onRemoveEventResponse";
+	private static final String ATTR_ON_MODIFY_EVENT_RESPONSE = "org.zkoss.calendar.Calendars.onModifyEventResponse";
+	private static final String ATTR_ON_INIT_POSTED = "org.zkoss.calendar.Calendars.onInitLaterPosted";	
+	
 	static {
 		addClientEvent(Timeline.class, "onItemSelect", CE_IMPORTANT);
 		addClientEvent(Timeline.class, "onPeriodSelect", CE_IMPORTANT);
@@ -37,6 +56,10 @@ public class Timeline extends XulElement {
 	private long _period = 604800000L/7 * 180;
 	private List<TimelineItem> _timelineItems;
 	private TimelineItem _selectedItem;
+	private CalendarModel _model;
+	private transient CalendarDataListener _dataListener;
+	private Map<Object, Object> _ids;
+	private List<CalendarEvent> _addEvtList, _mdyEvtList, _rmEvtList;
 	
 	/*
 	 * about timeline event
@@ -197,23 +220,148 @@ public class Timeline extends XulElement {
 	public TimelineItem getSelectedItem() {
 		return _selectedItem;
 	}
+	
+	/**
+	 * Returns the calendar model.
+	 */
+	public CalendarModel getModel() {
+		return _model;
+	}	
+
+	/**
+	 * Sets the calendar model.
+	 */
+	public void setModel(CalendarModel model) {
+		if (model != null) {
+			if (_model != model) {
+				if (_model != null) {
+					_model.removeCalendarDataListener(_dataListener);
+				}
+				_model = model;
+				initDataListener();
+			}
+		} else if (_model != null) {
+			_model.removeCalendarDataListener(_dataListener);
+			_model = null;
+		}
+		reSendEventGroup();
+	}
 
 	/*
 	 * self method
 	 */
 	
-	public void addTimelineItem(TimelineItem item) {
-		item.setObjectId(++_eventObjectId);
-		_timelineItems.add(item);
-		smartUpdate("addedItem", item);
+	/** Initializes _dataListener and register the listener to the model
+	 */
+	private void initDataListener() {
+		if (_dataListener == null)
+			_dataListener = new CalendarDataListener() {
+				public void onChange(CalendarDataEvent event) {
+					CalendarEvent ce = event.getCalendarEvent();
+					if (ce == null) {	// if large scope change, such as clearAll
+						reSendEventGroup();
+						return;
+					}
+					switch (event.getType()) {
+					case CalendarDataEvent.INTERVAL_ADDED:
+						addCalendarEvent(event.getCalendarEvent());			
+						break;
+					case CalendarDataEvent.INTERVAL_REMOVED:				
+						removeCalendarEvent(event.getCalendarEvent());			
+						break;
+					case CalendarDataEvent.CONTENTS_CHANGED:	
+						modifyCalendarEvent(event.getCalendarEvent());			
+					}
+				}
+			};
+
+		_model.addCalendarDataListener(_dataListener);
 	}
 	
-	public boolean removeTimelineItem(TimelineItem item) {
-		if(_timelineItems.remove(item)) {
-			smartUpdate("removedItem", item);
-			return true;
-		}else
-			return false;
+	public void onAddDayEventResponse() {
+		removeAttribute(ATTR_ON_ADD_EVENT_RESPONSE);
+		response("addEvent" + getUuid(), new AuSetAttribute(this,"addDayEvent",renderDayEvent(this, _addEvtList)));
+	}
+	
+	public void onRemoveDayEventResponse() {
+		removeAttribute(ATTR_ON_REMOVE_EVENT_RESPONSE);
+		response("removeEvent" + getUuid(), new AuSetAttribute(this,"removeDayEvent",renderDayEvent(this, _rmEvtList)));
+	}
+	
+	public void onModifyDayEventResponse() {
+		removeAttribute(ATTR_ON_MODIFY_EVENT_RESPONSE);
+		response("modifyEvent" + getUuid(), new AuSetAttribute(this,"modifyDayEvent",renderDayEvent(this, _mdyEvtList)));
+	}
+	
+	public String renderDayEvent(Timeline timeline, Collection<CalendarEvent> collection) {
+//		final StringBuffer sb = new StringBuffer().append('[');
+//		Date beginDate = calendars.getBeginDate();
+//		_sdfKey.setTimeZone(calendars.getDefaultTimeZone());
+//		for (Iterator<CalendarEvent> it = collection.iterator(); it.hasNext();) {
+//			CalendarEvent ce = it.next();
+//			appendEventByJSON(sb, calendars, key, ce);
+//		}		
+//		int len = sb.length();
+//		collection.clear();
+//		return sb.replace(len - 1, len, "]").toString();
+		return "[\"title\":\"aaaa\"]";
+	}
+	
+	protected void reSendEventGroup() {
+		if (getAttribute(ATTR_ON_INIT_POSTED) == null) {
+			setAttribute(ATTR_ON_INIT_POSTED, Boolean.TRUE);
+			Events.postEvent(-10100, "onInitRender", this, null);
+		}
+	}
+
+	private void addCalendarEvent(CalendarEvent ce) {
+		if (ce == null) return;
+		if (_addEvtList == null)
+			_addEvtList = new LinkedList<CalendarEvent>();
+		_addEvtList.add(ce);
+		if (getAttribute(ATTR_ON_ADD_EVENT_RESPONSE) == null) {
+			setAttribute(ATTR_ON_ADD_EVENT_RESPONSE, Boolean.TRUE);
+			Events.postEvent(-20000, "onAddDayEventResponse", this, null);
+		}
+	}
+
+	private void removeCalendarEvent(CalendarEvent ce) {
+		if (ce == null) return;
+		if (_mdyEvtList == null)
+			_mdyEvtList = new LinkedList<CalendarEvent>();
+		_mdyEvtList.add(ce);
+		if (getAttribute(ATTR_ON_MODIFY_EVENT_RESPONSE) == null) {
+			setAttribute(ATTR_ON_MODIFY_EVENT_RESPONSE, Boolean.TRUE);
+			Events.postEvent(-20000, "onModifyDayEventResponse", this, null);
+		}
+	}
+
+	private void modifyCalendarEvent(CalendarEvent ce) {
+		if (ce == null) return;
+		if (_mdyEvtList == null)
+			_mdyEvtList = new LinkedList<CalendarEvent>();
+		_mdyEvtList.add(ce);
+		if (getAttribute(ATTR_ON_MODIFY_EVENT_RESPONSE) == null) {
+			setAttribute(ATTR_ON_MODIFY_EVENT_RESPONSE, Boolean.TRUE);
+			Events.postEvent(-20000, "onModifyDayEventResponse", this, null);
+		}
+	}
+
+
+	private static void appendEventByJSON(StringBuffer sb, Calendars calendars, String key, CalendarEvent ce) {
+		DateFormatter df = calendars.getDateFormatter();
+		Locale locale = Locales.getCurrent();
+		TimeZone timezone = calendars.getDefaultTimeZone();
+		String title = Util.createEventTitle(df, locale, timezone, ce);
+
+		JSONObject json = new JSONObject();
+		json.put("id", calendars.getCalendarEventId(ce));
+//		json.put("title", calendars.isEscapeXML() ? escapeXML(title) : title); //ZKCAL-33: title should also escapeXML
+//		json.put("content", calendars.isEscapeXML() ? escapeXML(ce.getContent()): ce.getContent());
+//		json.put("beginDate", String.valueOf(getDSTTime(timezone, ce.getBeginDate())));
+//		json.put("endDate", String.valueOf(getDSTTime(timezone ,ce.getEndDate())));
+
+		sb.append(json.toString()).append(",");
 	}
 	
 	/*
